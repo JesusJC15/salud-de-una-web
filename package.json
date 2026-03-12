@@ -1,24 +1,39 @@
 {
   "name": "salud-de-una-web",
+  "type": "module",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack --port 3001",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "echo \"Error: no test yet\"",
+    "check:lint": "eslint",
+    "fix:lint": "eslint --fix",
+    "check:types": "tsc --project tsconfig.json --pretty --noEmit"
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",
+    "@tanstack/react-form": "^1.28.4",
+    "@tanstack/react-query": "^5.90.21",
+    "@tanstack/react-query-devtools": "^5.91.3",
+    "axios": "^1.13.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "crypto-js": "^4.2.0",
     "lucide-react": "^0.577.0",
+    "motion": "^12.35.2",
     "next": "16.1.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-hook-form": "^7.71.2",
+    "react-hot-toast": "^2.6.0",
+    "recharts": "3.8.0",
     "shadcn": "^4.0.5",
-    "tailwind-merge": "^3.5.0"
+    "tailwind-merge": "^3.5.0",
+    "tailwindcss-react-aria-components": "^2.0.1",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^7.7.0",

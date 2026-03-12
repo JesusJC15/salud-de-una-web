@@ -1,3 +1,3 @@
 export interface ConsultationQueueResponseDto {
-  items: unknown[];
+  items: unknown[]
 }

@@ -3,8 +3,8 @@ export function translateEnumValue(
   value: string | undefined,
 ): string {
   if (!value) {
-    return "";
+    return ''
   }
 
-  return labels[value] ?? value;
+  return labels[value] ?? value
 }

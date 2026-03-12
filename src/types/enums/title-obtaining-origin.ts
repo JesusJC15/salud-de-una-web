@@ -1,4 +1,4 @@
 export enum TitleObtainingOrigin {
-  LOCAL = "LOCAL",
-  FOREIGN = "FOREIGN",
+  LOCAL = 'LOCAL',
+  FOREIGN = 'FOREIGN',
 }
