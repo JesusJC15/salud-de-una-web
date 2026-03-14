@@ -1,6 +1,7 @@
 'use client'
 
 import type { RegisterDoctorDto } from '@/types'
+import { ArrowRight, ChevronDown } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
@@ -40,7 +41,7 @@ export default function RegisterForm() {
     setError(null)
   }
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError(null)
 
@@ -89,93 +90,133 @@ export default function RegisterForm() {
   return (
     <motion.form
       onSubmit={handleSubmit}
-      className="mt-8 space-y-4"
+      className="space-y-6"
       initial="hidden"
       animate="visible"
       variants={staggerParent}
     >
-      <motion.div className="grid grid-cols-1 gap-4 sm:grid-cols-2" variants={staggerItem}>
-        <Input
-          name="firstName"
-          placeholder="Nombres"
-          value={formData.firstName}
-          onChange={e => updateField('firstName', e.target.value)}
-          disabled={loading}
-        />
-        <Input
-          name="lastName"
-          placeholder="Apellidos"
-          value={formData.lastName}
-          onChange={e => updateField('lastName', e.target.value)}
-          disabled={loading}
-        />
+      <motion.div className="grid grid-cols-1 gap-6 md:grid-cols-2" variants={staggerItem}>
+        <label htmlFor="firstName" className="flex flex-col gap-2">
+          <span className="text-sm font-semibold text-slate-700">Nombres</span>
+          <Input
+            id="firstName"
+            name="firstName"
+            placeholder="Ej: Juan"
+            value={formData.firstName}
+            onChange={e => updateField('firstName', e.target.value)}
+            disabled={loading}
+            className="h-12 rounded-xl border-slate-200 bg-white/80 text-base text-slate-900 placeholder:text-slate-400 focus-ring"
+          />
+        </label>
+
+        <label htmlFor="lastName" className="flex flex-col gap-2">
+          <span className="text-sm font-semibold text-slate-700">Apellidos</span>
+          <Input
+            id="lastName"
+            name="lastName"
+            placeholder="Ej: Perez"
+            value={formData.lastName}
+            onChange={e => updateField('lastName', e.target.value)}
+            disabled={loading}
+            className="h-12 rounded-xl border-slate-200 bg-white/80 text-base text-slate-900 placeholder:text-slate-400 focus-ring"
+          />
+        </label>
       </motion.div>
 
-      <motion.div variants={staggerItem}>
-        <Input
-          type="email"
-          name="email"
-          placeholder="correo@empresa.com"
-          value={formData.email}
-          onChange={e => updateField('email', e.target.value)}
-          disabled={loading}
-        />
+      <motion.div className="grid grid-cols-1 gap-6 md:grid-cols-2" variants={staggerItem}>
+        <label htmlFor="email" className="flex flex-col gap-2">
+          <span className="text-sm font-semibold text-slate-700">Correo electronico profesional</span>
+          <Input
+            id="email"
+            type="email"
+            name="email"
+            placeholder="nombre@clinica.com"
+            value={formData.email}
+            onChange={e => updateField('email', e.target.value)}
+            disabled={loading}
+            className="h-12 rounded-xl border-slate-200 bg-white/80 text-base text-slate-900 placeholder:text-slate-400 focus-ring"
+          />
+        </label>
+
+        <label htmlFor="password" className="flex flex-col gap-2">
+          <span className="text-sm font-semibold text-slate-700">Contrasena</span>
+          <Input
+            id="password"
+            type="password"
+            name="password"
+            placeholder="Minimo 8 caracteres"
+            value={formData.password}
+            onChange={e => updateField('password', e.target.value)}
+            disabled={loading}
+            className="h-12 rounded-xl border-slate-200 bg-white/80 text-base text-slate-900 placeholder:text-slate-400 focus-ring"
+          />
+        </label>
       </motion.div>
 
-      <motion.div variants={staggerItem}>
-        <Input
-          type="password"
-          name="password"
-          placeholder="Contrasena"
-          value={formData.password}
-          onChange={e => updateField('password', e.target.value)}
-          disabled={loading}
-        />
+      <motion.div className="grid grid-cols-1 gap-6 md:grid-cols-2" variants={staggerItem}>
+        <label htmlFor="specialty" className="flex flex-col gap-2">
+          <span className="text-sm font-semibold text-slate-700">Especialidad</span>
+          <div className="relative">
+            <select
+              id="specialty"
+              name="specialty"
+              aria-label="Especialidad"
+              title="Especialidad"
+              value={formData.specialty}
+              onChange={e => updateField('specialty', e.target.value)}
+              disabled={loading}
+              className="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-white/80 px-4 pr-11 text-base text-slate-900 focus-ring"
+            >
+              {specialties.map(specialty => (
+                <option key={specialty} value={specialty}>
+                  {SPECIALTY_LABELS[specialty]}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-5 w-5 -translate-y-1/2 text-slate-400" />
+          </div>
+        </label>
+
+        <label htmlFor="professionalLicense" className="flex flex-col gap-2">
+          <span className="text-sm font-semibold text-slate-700">Tarjeta Profesional</span>
+          <Input
+            id="professionalLicense"
+            name="professionalLicense"
+            placeholder="Numero de tarjeta"
+            value={formData.professionalLicense ?? ''}
+            onChange={e => updateField('professionalLicense', e.target.value)}
+            disabled={loading}
+            className="h-12 rounded-xl border-slate-200 bg-white/80 text-base text-slate-900 placeholder:text-slate-400 focus-ring"
+          />
+        </label>
       </motion.div>
 
-      <motion.div variants={staggerItem}>
-        <select
-          name="specialty"
-          aria-label="Especialidad"
-          title="Especialidad"
-          value={formData.specialty}
-          onChange={e => updateField('specialty', e.target.value)}
-          disabled={loading}
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-        >
-          {specialties.map(specialty => (
-            <option key={specialty} value={specialty}>
-              {SPECIALTY_LABELS[specialty]}
-            </option>
-          ))}
-        </select>
-      </motion.div>
+      <motion.div className="grid grid-cols-1 gap-6 md:grid-cols-2" variants={staggerItem}>
+        <label htmlFor="personalId" className="flex flex-col gap-2">
+          <span className="text-sm font-semibold text-slate-700">Documento de identidad</span>
+          <Input
+            id="personalId"
+            name="personalId"
+            placeholder="Numero de identificacion"
+            value={formData.personalId}
+            onChange={e => updateField('personalId', e.target.value)}
+            disabled={loading}
+            className="h-12 rounded-xl border-slate-200 bg-white/80 text-base text-slate-900 placeholder:text-slate-400 focus-ring"
+          />
+        </label>
 
-      <motion.div className="grid grid-cols-1 gap-4 sm:grid-cols-2" variants={staggerItem}>
-        <Input
-          name="personalId"
-          placeholder="Identificacion"
-          value={formData.personalId}
-          onChange={e => updateField('personalId', e.target.value)}
-          disabled={loading}
-        />
-        <Input
-          name="phoneNumber"
-          placeholder="Telefono"
-          value={formData.phoneNumber}
-          onChange={e => updateField('phoneNumber', e.target.value)}
-          disabled={loading}
-        />
-      </motion.div>
-
-      <motion.div variants={staggerItem}>
-        <Input
-          name="professionalLicense"
-          placeholder="Licencia profesional (opcional)"
-          value={formData.professionalLicense ?? ''}
-          onChange={e => updateField('professionalLicense', e.target.value)}
-          disabled={loading}
-        />
+        <label htmlFor="phoneNumber" className="flex flex-col gap-2">
+          <span className="text-sm font-semibold text-slate-700">Telefono</span>
+          <Input
+            id="phoneNumber"
+            name="phoneNumber"
+            placeholder="Ej: 3001234567"
+            value={formData.phoneNumber}
+            onChange={e => updateField('phoneNumber', e.target.value)}
+            disabled={loading}
+            className="h-12 rounded-xl border-slate-200 bg-white/80 text-base text-slate-900 placeholder:text-slate-400 focus-ring"
+          />
+        </label>
       </motion.div>
 
       <AnimatePresence mode="wait">
@@ -193,11 +234,28 @@ export default function RegisterForm() {
         )}
       </AnimatePresence>
 
-      <motion.div variants={staggerItem} whileHover={{ y: -1 }} whileTap={{ y: 0 }}>
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? 'Creando cuenta...' : 'Crear cuenta staff'}
+      <motion.div className="pt-2" variants={staggerItem} whileHover={{ y: -1 }} whileTap={{ y: 0 }}>
+        <Button
+          type="submit"
+          className="h-14 w-full rounded-xl bg-linear-to-r from-aquamarine to-primary text-base font-bold text-white shadow-lg shadow-aquamarine/20 transition-all hover:shadow-aquamarine/30"
+          disabled={loading}
+        >
+          <span>{loading ? 'Creando cuenta...' : 'Registrarse'}</span>
+          {!loading && <ArrowRight className="h-5 w-5" />}
         </Button>
       </motion.div>
+
+      <motion.p className="text-center text-sm text-slate-500" variants={staggerItem}>
+        Ya tienes una cuenta?
+        {' '}
+        <button
+          type="button"
+          onClick={() => router.push('/login')}
+          className="font-semibold text-primary hover:underline"
+        >
+          Inicia sesión aquí
+        </button>
+      </motion.p>
     </motion.form>
   )
 }
