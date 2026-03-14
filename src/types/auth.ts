@@ -1,5 +1,5 @@
 import type { EntityId, IsoDateString } from './common'
-import type { DoctorStatus, Specialty, UserGender, UserRole } from './enums'
+import type { DoctorStatus, Specialty, UserRole } from './enums'
 
 export interface LoginDto {
   email: string
@@ -23,15 +23,6 @@ export interface RegisterDoctorDto {
   personalId: string
   phoneNumber: string
   professionalLicense?: string
-}
-
-export interface RegisterPatientDto {
-  firstName: string
-  lastName: string
-  email: string
-  password: string
-  birthDate?: IsoDateString
-  gender?: UserGender
 }
 
 export interface AuthMeUser {
@@ -59,15 +50,6 @@ export interface AuthResponseDto {
 
 export interface AuthSession extends AuthResponseDto {
   refreshSessionId: string
-}
-
-export interface RegisterPatientResponseDto {
-  id: EntityId
-  firstName: string
-  lastName: string
-  email: string
-  role: UserRole
-  createdAt: IsoDateString
 }
 
 export interface RegisterDoctorResponseDto {

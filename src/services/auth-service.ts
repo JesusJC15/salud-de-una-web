@@ -1,7 +1,14 @@
-import type { AuthMeResponseDto, AuthResponseDto, LoginDto, LogoutResponseDto } from '@/types'
+import type {
+  AuthMeResponseDto,
+  AuthResponseDto,
+  LoginDto,
+  LogoutResponseDto,
+  RegisterDoctorDto,
+  RegisterDoctorResponseDto,
+} from '@/types'
 import envConfig from '../utils/config/envConfig'
 
-type AuthLoginTarget = 'patient' | 'staff'
+type AuthLoginTarget = 'staff'
 
 interface BackendErrorResponse {
   correlation_id?: string
@@ -190,12 +197,12 @@ function persistSession(session: AuthResponseDto | null) {
   )
 }
 
-async function requestAuth(
+async function requestAuth<T>(
   endpoint: string,
   body?: unknown,
   fallbackError = 'Authentication request failed',
-): Promise<AuthResponseDto> {
-  const session = await fetchJson<AuthResponseDto>(
+): Promise<T> {
+  return fetchJson<T>(
     `${envConfig.apiBaseUrl}${endpoint}`,
     {
       method: 'POST',
@@ -204,9 +211,6 @@ async function requestAuth(
     },
     fallbackError,
   )
-
-  persistSession(session)
-  return session
 }
 
 async function performRefresh(): Promise<AuthResponseDto | null> {
@@ -218,13 +222,9 @@ async function performRefresh(): Promise<AuthResponseDto | null> {
   }
 
   try {
-    const session = await fetchJson<AuthResponseDto>(
-      `${envConfig.apiBaseUrl}/auth/refresh`,
-      {
-        method: 'POST',
-        headers: JSON_HEADERS,
-        body: JSON.stringify({ refreshToken }),
-      },
+    const session = await requestAuth<AuthResponseDto>(
+      '/auth/refresh',
+      { refreshToken },
       'Session refresh failed',
     )
 
@@ -233,22 +233,6 @@ async function performRefresh(): Promise<AuthResponseDto | null> {
   }
   catch {
     persistSession(null)
-    return null
-  }
-}
-
-function getCurrentUserFromStorage(): AuthResponseDto['user'] | null {
-  const rawUser = getStoredItem(envConfig.localStorageKeys.user)
-
-  if (!rawUser) {
-    return null
-  }
-
-  try {
-    return JSON.parse(rawUser) as AuthResponseDto['user']
-  }
-  catch {
-    setStoredItem(envConfig.localStorageKeys.user, null)
     return null
   }
 }
@@ -263,23 +247,50 @@ export const authService = {
   },
 
   getCurrentUser(): AuthResponseDto['user'] | null {
-    return getCurrentUserFromStorage()
+    const rawUser = getStoredItem(envConfig.localStorageKeys.user)
+
+    if (!rawUser) {
+      return null
+    }
+
+    try {
+      return JSON.parse(rawUser) as AuthResponseDto['user']
+    }
+    catch {
+      setStoredItem(envConfig.localStorageKeys.user, null)
+      return null
+    }
   },
 
   setAccessToken(accessToken: string | null) {
     accessTokenInMemory = accessToken
   },
 
-  async login(credentials: LoginDto, target: AuthLoginTarget = 'patient'): Promise<AuthResponseDto> {
-    return requestAuth(`/auth/${target}/login`, credentials, 'Login failed')
-  },
+  async login(credentials: LoginDto, target: AuthLoginTarget = 'staff'): Promise<AuthResponseDto> {
+    const session = await requestAuth<AuthResponseDto>(
+      `/auth/${target}/login`,
+      credentials,
+      'Login failed',
+    )
 
-  async loginPatient(credentials: LoginDto): Promise<AuthResponseDto> {
-    return this.login(credentials, 'patient')
+    persistSession(session)
+    return session
   },
 
   async loginStaff(credentials: LoginDto): Promise<AuthResponseDto> {
     return this.login(credentials, 'staff')
+  },
+
+  async registerDoctor(payload: RegisterDoctorDto): Promise<RegisterDoctorResponseDto> {
+    return requestAuth<RegisterDoctorResponseDto>(
+      '/auth/doctor/register',
+      payload,
+      'Doctor registration failed',
+    )
+  },
+
+  async registerStaff(payload: RegisterDoctorDto): Promise<RegisterDoctorResponseDto> {
+    return this.registerDoctor(payload)
   },
 
   async refresh(): Promise<AuthResponseDto | null> {
@@ -294,13 +305,9 @@ export const authService = {
     const refreshToken = this.getRefreshToken()
 
     try {
-      return await fetchJson<LogoutResponseDto>(
-        `${envConfig.apiBaseUrl}/auth/logout`,
-        {
-          method: 'POST',
-          headers: JSON_HEADERS,
-          body: JSON.stringify({ refreshToken }),
-        },
+      return await requestAuth<LogoutResponseDto>(
+        '/auth/logout',
+        { refreshToken },
         'Logout failed',
       )
     }

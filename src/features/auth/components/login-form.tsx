@@ -2,8 +2,10 @@
 
 import type { LoginDto } from '@/types'
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { staggerItem, staggerParent } from '@/components/animations/motion-presets'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { authService } from '@/services/auth-service'
@@ -70,9 +72,15 @@ export default function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="w-full space-y-5">
+    <motion.form
+      onSubmit={handleSubmit}
+      className="w-full space-y-5"
+      initial="hidden"
+      animate="visible"
+      variants={staggerParent}
+    >
       {/* Email Field */}
-      <div className="flex flex-col gap-2">
+      <motion.div className="flex flex-col gap-2" variants={staggerItem}>
         <label htmlFor="email" className="text-slate-700 dark:text-slate-300 text-sm font-semibold ml-1">
           Email Profesional
         </label>
@@ -89,10 +97,10 @@ export default function LoginForm() {
             className="pl-12 pr-4 h-14 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus-ring disabled:opacity-50"
           />
         </div>
-      </div>
+      </motion.div>
 
       {/* Password Field */}
-      <div className="flex flex-col gap-2">
+      <motion.div className="flex flex-col gap-2" variants={staggerItem}>
         <label htmlFor="password" className="text-slate-700 dark:text-slate-300 text-sm font-semibold ml-1">
           Contraseña
         </label>
@@ -123,46 +131,57 @@ export default function LoginForm() {
               )}
           </button>
         </div>
-      </div>
+      </motion.div>
 
       {/* Forgot Password Link */}
-      <div className="flex justify-end">
+      <motion.div className="flex justify-end" variants={staggerItem}>
         <a
           href="/forgot-password"
           className="text-primary text-sm font-semibold hover:text-aquamarine transition-colors"
         >
           ¿Olvidé mi contraseña?
         </a>
-      </div>
+      </motion.div>
 
       {/* Error Message */}
-      {error && (
-        <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-          <p className="text-red-700 dark:text-red-400 text-sm font-medium">
-            {error}
-          </p>
-        </div>
-      )}
+      <AnimatePresence mode="wait">
+        {error && (
+          <motion.div
+            key="login-error"
+            className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2 }}
+          >
+            <p className="text-red-700 dark:text-red-400 text-sm font-medium">
+              {error}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Submit Button */}
-      <Button
-        type="submit"
-        disabled={loading}
-        className="w-full h-14 bg-linear-to-r from-aquamarine to-primary text-white rounded-xl font-bold text-lg shadow-lg shadow-aquamarine/20 hover:shadow-aquamarine/30 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {loading
-          ? (
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              <span>Iniciando sesión...</span>
-            </div>
-          )
-          : (
-            <div className="flex items-center gap-2">
-              <span>Acceder al Panel</span>
-            </div>
-          )}
-      </Button>
-    </form>
+      <motion.div variants={staggerItem} whileHover={{ y: -1 }} whileTap={{ y: 0 }}>
+        <Button
+          type="submit"
+          disabled={loading}
+          className="w-full h-14 bg-linear-to-r from-aquamarine to-primary text-white rounded-xl font-bold text-lg shadow-lg shadow-aquamarine/20 hover:shadow-aquamarine/30 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading
+            ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Iniciando sesión...</span>
+              </div>
+            )
+            : (
+              <div className="flex items-center gap-2">
+                <span>Acceder al Panel</span>
+              </div>
+            )}
+        </Button>
+      </motion.div>
+    </motion.form>
   )
 }
