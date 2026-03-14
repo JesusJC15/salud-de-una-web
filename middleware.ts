@@ -84,7 +84,8 @@ function isPrefixMatch(pathname: string, prefix: string) {
 }
 
 function isPublicPath(pathname: string) {
-  return PUBLIC_PATHS.some(path => isPrefixMatch(pathname, path))
+  const normalizedPathname = stripTrailingSlash(pathname)
+  return PUBLIC_PATHS.includes(normalizedPathname as (typeof PUBLIC_PATHS)[number])
 }
 
 function isProtectedPath(pathname: string) {
