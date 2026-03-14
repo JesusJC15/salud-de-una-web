@@ -1,21 +1,11 @@
 import type { AuthMeResponseDto, AuthResponseDto, LoginDto, LogoutResponseDto } from '@/types'
+import { createCorrelationId, createTimeoutController } from '@/lib/http-utils'
+import type { BackendErrorPayload, TimeoutController } from '@/lib/http-utils'
 import envConfig from '../utils/config/envConfig'
 
 type AuthLoginTarget = 'patient' | 'staff'
 
-export interface BackendErrorResponse {
-  correlation_id?: string
-  message?: string | string[]
-  path?: string
-  statusCode?: number
-  timestamp?: string
-}
-
-export interface TimeoutController {
-  cleanup: () => void
-  didTimeout: () => boolean
-  signal?: AbortSignal
-}
+export type { BackendErrorPayload as BackendErrorResponse, TimeoutController }
 
 const JSON_HEADERS = {
   'Accept': 'application/json',
@@ -50,7 +40,7 @@ function setStoredItem(key: string, value: string | null) {
   window.localStorage.setItem(key, value)
 }
 
-function getErrorMessage(payload: BackendErrorResponse | null, fallback: string) {
+function getErrorMessage(payload: BackendErrorPayload | null, fallback: string) {
   if (!payload?.message) {
     return fallback
   }
@@ -60,62 +50,11 @@ function getErrorMessage(payload: BackendErrorResponse | null, fallback: string)
     : payload.message
 }
 
-export function createCorrelationId() {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID()
-  }
-
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
-}
-
-export function createTimeoutController(
-  timeoutMs: number,
-  externalSignal?: AbortSignal,
-): TimeoutController {
-  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
-    return {
-      cleanup: () => {},
-      didTimeout: () => false,
-      signal: externalSignal,
-    }
-  }
-
-  const controller = new AbortController()
-  let timedOut = false
-
-  const timeoutId = setTimeout(() => {
-    timedOut = true
-    controller.abort()
-  }, timeoutMs)
-
-  const onAbort = () => {
-    controller.abort()
-  }
-
-  if (externalSignal) {
-    if (externalSignal.aborted) {
-      controller.abort()
-    }
-    else {
-      externalSignal.addEventListener('abort', onAbort, { once: true })
-    }
-  }
-
-  return {
-    signal: controller.signal,
-    didTimeout: () => timedOut,
-    cleanup: () => {
-      clearTimeout(timeoutId)
-      if (externalSignal) {
-        externalSignal.removeEventListener('abort', onAbort)
-      }
-    },
-  }
-}
+export { createCorrelationId, createTimeoutController }
 
 async function readError(response: Response, fallback: string) {
   try {
-    const payload = await response.json() as BackendErrorResponse
+    const payload = await response.json() as BackendErrorPayload
     const message = getErrorMessage(payload, fallback)
     const correlationId = payload.correlation_id || response.headers.get(CORRELATION_HEADER)
 
@@ -188,25 +127,6 @@ function persistSession(session: AuthResponseDto | null) {
     envConfig.localStorageKeys.user,
     session?.user ? JSON.stringify(session.user) : null,
   )
-}
-
-async function requestAuth(
-  endpoint: string,
-  body?: unknown,
-  fallbackError = 'Authentication request failed',
-): Promise<AuthResponseDto> {
-  const session = await fetchJson<AuthResponseDto>(
-    `${envConfig.apiBaseUrl}${endpoint}`,
-    {
-      method: 'POST',
-      headers: JSON_HEADERS,
-      body: JSON.stringify(body ?? {}),
-    },
-    fallbackError,
-  )
-
-  persistSession(session)
-  return session
 }
 
 async function performRefresh(): Promise<AuthResponseDto | null> {
