@@ -27,10 +27,10 @@ export function LoginPage() {
 
           <div className="space-y-4">
             <h1 className="text-4xl font-black tracking-tight text-slate-900">
-              Innovacion en Comunicacion Medica
+              Innovación en Comunicación Médica
             </h1>
             <p className="text-lg leading-relaxed text-slate-600">
-              Nuestra plataforma permite a los profesionales de la salud optimizar el flujo de trabajo clinico y mejorar la experiencia del paciente.
+              Nuestra plataforma permite a los profesionales de la salud optimizar el flujo de trabajo clínico y mejorar la experiencia del paciente.
             </p>
           </div>
 
@@ -49,10 +49,10 @@ export function LoginPage() {
 
           <div className="space-y-2">
             <h2 className="text-3xl font-black leading-tight tracking-tight text-slate-900">
-              Portal de Medicos y Administradores
+              Portal de Médicos y Administradores
             </h2>
             <p className="font-medium text-slate-500">
-              Inicie sesion para gestionar la atencion clinica
+              Inicie sesión para gestionar la atención clínica
             </p>
           </div>
 
