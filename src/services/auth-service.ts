@@ -331,8 +331,4 @@ export const authService = {
   isAuthenticated(): boolean {
     return Boolean(this.getAccessToken() || this.getRefreshToken())
   },
-
-  async getMe(): Promise<AuthMeResponseDto> {
-    return this.me()
-  },
 }
