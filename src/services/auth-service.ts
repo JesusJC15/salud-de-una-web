@@ -3,7 +3,7 @@ import envConfig from '../utils/config/envConfig'
 
 type AuthLoginTarget = 'patient' | 'staff'
 
-interface BackendErrorResponse {
+export interface BackendErrorResponse {
   correlation_id?: string
   message?: string | string[]
   path?: string
@@ -11,7 +11,7 @@ interface BackendErrorResponse {
   timestamp?: string
 }
 
-interface TimeoutController {
+export interface TimeoutController {
   cleanup: () => void
   didTimeout: () => boolean
   signal?: AbortSignal
@@ -60,7 +60,7 @@ function getErrorMessage(payload: BackendErrorResponse | null, fallback: string)
     : payload.message
 }
 
-function createCorrelationId() {
+export function createCorrelationId() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID()
   }
@@ -68,7 +68,7 @@ function createCorrelationId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
 }
 
-function createTimeoutController(
+export function createTimeoutController(
   timeoutMs: number,
   externalSignal?: AbortSignal,
 ): TimeoutController {
