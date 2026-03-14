@@ -87,15 +87,15 @@ export function DashboardPage() {
               onClick={handleLogout}
               className="bg-red-600 text-white hover:bg-red-700"
             >
-              Cerrar Sesion
+              Cerrar Sesión
             </Button>
           </div>
 
           <div className="space-y-6">
             <div className="rounded-lg bg-linear-to-r from-aquamarine to-primary p-6 text-white">
-              <h2 className="mb-2 text-2xl font-bold">Portal de Medicos</h2>
+              <h2 className="mb-2 text-2xl font-bold">Portal de Médicos</h2>
               <p className="opacity-90">
-                Sistema de gestion de atencion clinica y comunicacion medica
+                Sistema de gestión de atención clínica y comunicación médica
               </p>
             </div>
 
@@ -105,7 +105,7 @@ export function DashboardPage() {
                   Pacientes
                 </h3>
                 <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Gestiona pacientes y su informacion medica
+                  Gestiona pacientes y su información médica
                 </p>
               </div>
 
@@ -114,7 +114,7 @@ export function DashboardPage() {
                   Reportes
                 </h3>
                 <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Accede a reportes y estadisticas
+                  Accede a reportes y estadísticas
                 </p>
               </div>
             </div>
