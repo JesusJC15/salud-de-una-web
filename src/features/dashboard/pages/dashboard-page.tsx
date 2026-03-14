@@ -19,7 +19,7 @@ export function DashboardPage() {
           return
         }
 
-        const userData = await authService.getMe()
+        const userData = await authService.me()
         setUser(userData.user)
       }
       catch (error) {
