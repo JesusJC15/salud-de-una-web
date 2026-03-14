@@ -1,14 +1,16 @@
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import { cn } from '@/lib/utils'
-import './globals.css'
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
 
-const interSans = Inter({
-  variable: '--font-inter-sans',
-  subsets: ['latin'],
-})
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
   title: 'SaludDeUna',
@@ -19,12 +21,12 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn('font-sans', inter.variable)}>
+    <html lang="en">
       <body
-        className={`${interSans.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <div className="gradient-bg dark:bg-background-dark relative flex min-h-screen flex-col overflow-x-hidden">
           <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
@@ -50,5 +52,5 @@ export default function RootLayout({
         </div>
       </body>
     </html>
-  )
+  );
 }
