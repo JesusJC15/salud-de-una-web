@@ -35,8 +35,15 @@ export function DashboardPage() {
   }, [router])
 
   const handleLogout = async () => {
-    await authService.logout()
-    router.push('/login')
+    try {
+      await authService.logout()
+    }
+    catch (error) {
+      console.error('Error during logout:', error)
+    }
+    finally {
+      router.push('/login')
+    }
   }
 
   if (loading) {
