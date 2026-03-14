@@ -158,7 +158,7 @@ async function refreshSession(refreshToken: string): Promise<AuthSessionResponse
   }
 
   try {
-    const response = await fetch(`${apiBaseUrl}/v1/auth/refresh`, {
+    const response = await fetch(`${apiBaseUrl}/auth/refresh`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
