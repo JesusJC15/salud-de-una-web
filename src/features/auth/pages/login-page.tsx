@@ -63,7 +63,7 @@ export function LoginPage() {
           <div className="mt-10 space-y-4 border-t border-slate-200 pt-8">
             <div>
               <p className="text-center text-sm text-slate-500">
-                No tienes una cuenta?
+                ¿No tienes una cuenta?
               </p>
               <div className="mt-4">
                 <button
