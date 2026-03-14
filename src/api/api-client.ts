@@ -1,17 +1,34 @@
-import { authService } from '@/services/authService'
+import { authService } from '@/services/auth-service'
 import envConfig from '@/utils/config/envConfig'
 
 type PrimitiveQueryValue = string | number | boolean | null | undefined
 
+interface BackendErrorPayload {
+  correlation_id?: string
+  message?: string | string[]
+  path?: string
+  statusCode?: number
+  timestamp?: string
+}
+
+interface TimeoutController {
+  cleanup: () => void
+  didTimeout: () => boolean
+  signal?: AbortSignal
+}
+
 export interface ApiClientRequestConfig extends Omit<RequestInit, 'body' | 'headers'> {
+  correlationId?: string
   data?: BodyInit | Record<string, unknown> | unknown[] | null
   endpoint?: string
   headers?: HeadersInit
   params?: Record<string, PrimitiveQueryValue>
   requiresAuth?: boolean
+  timeoutMs?: number
 }
 
 export interface ApiResponse<T> {
+  correlationId?: string
   config: ApiClientRequestConfig
   data: T
   headers: Headers
@@ -20,8 +37,26 @@ export interface ApiResponse<T> {
   url: string
 }
 
+export class ApiClientError extends Error {
+  readonly correlationId?: string
+  readonly path?: string
+  readonly status?: number
+  readonly timestamp?: string
+
+  constructor(message: string, details?: Omit<ApiClientError, 'name' | 'message'>) {
+    super(message)
+    this.name = 'ApiClientError'
+    this.status = details?.status
+    this.path = details?.path
+    this.timestamp = details?.timestamp
+    this.correlationId = details?.correlationId
+  }
+}
+
 const TRAILING_SLASHES_PATTERN = /\/+$/g
 const LEADING_SLASHES_PATTERN = /^\/+/
+const DEFAULT_TIMEOUT_MS = 15_000
+const CORRELATION_HEADER = 'x-correlation-id'
 
 function normalizeSegment(value: string) {
   return value.replace(LEADING_SLASHES_PATTERN, '')
@@ -68,6 +103,59 @@ function createHeaders(headers?: HeadersInit) {
   return nextHeaders
 }
 
+function createCorrelationId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
+}
+
+function createTimeoutController(
+  timeoutMs: number,
+  externalSignal?: AbortSignal,
+): TimeoutController {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    return {
+      cleanup: () => {},
+      didTimeout: () => false,
+      signal: externalSignal,
+    }
+  }
+
+  const controller = new AbortController()
+  let timedOut = false
+
+  const timeoutId = setTimeout(() => {
+    timedOut = true
+    controller.abort()
+  }, timeoutMs)
+
+  const onAbort = () => {
+    controller.abort()
+  }
+
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      controller.abort()
+    }
+    else {
+      externalSignal.addEventListener('abort', onAbort, { once: true })
+    }
+  }
+
+  return {
+    signal: controller.signal,
+    didTimeout: () => timedOut,
+    cleanup: () => {
+      clearTimeout(timeoutId)
+      if (externalSignal) {
+        externalSignal.removeEventListener('abort', onAbort)
+      }
+    },
+  }
+}
+
 async function readResponseData<T>(response: Response): Promise<T> {
   if (response.status === 204) {
     return undefined as T
@@ -81,17 +169,44 @@ async function readResponseData<T>(response: Response): Promise<T> {
   return await response.text() as T
 }
 
+function toApiClientError(
+  fallback: string,
+  details?: {
+    correlationId?: string
+    path?: string
+    status?: number
+    timestamp?: string
+  },
+) {
+  return new ApiClientError(fallback, {
+    correlationId: details?.correlationId,
+    path: details?.path,
+    status: details?.status,
+    timestamp: details?.timestamp,
+  })
+}
+
 async function readError(response: Response, fallback: string) {
+  const headerCorrelationId = response.headers.get(CORRELATION_HEADER) ?? undefined
+
   try {
-    const payload = await readResponseData<{ message?: string | string[] }>(response)
+    const payload = await readResponseData<BackendErrorPayload>(response)
     const message = Array.isArray(payload?.message)
       ? payload.message.join(', ')
       : payload?.message
 
-    return new Error(message || fallback)
+    return toApiClientError(message || fallback, {
+      correlationId: payload?.correlation_id ?? headerCorrelationId,
+      path: payload?.path,
+      status: payload?.statusCode ?? response.status,
+      timestamp: payload?.timestamp,
+    })
   }
   catch {
-    return new Error(fallback)
+    return toApiClientError(fallback, {
+      correlationId: headerCorrelationId,
+      status: response.status,
+    })
   }
 }
 
@@ -128,14 +243,21 @@ async function executeRequest<T>(
   retryOnUnauthorized = true,
 ): Promise<ApiResponse<T>> {
   const {
+    correlationId,
     data,
     headers,
     params,
     requiresAuth = true,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
     ...requestInit
   } = config
 
   const requestHeaders = createHeaders(headers)
+  const requestCorrelationId = correlationId || createCorrelationId()
+  if (!requestHeaders.has(CORRELATION_HEADER)) {
+    requestHeaders.set(CORRELATION_HEADER, requestCorrelationId)
+  }
+
   const accessToken = await resolveAccessToken(requiresAuth)
 
   if (accessToken) {
@@ -154,11 +276,43 @@ async function executeRequest<T>(
   }
 
   const url = buildUrl(basePath, endpoint, params)
-  const response = await fetch(url, {
-    ...requestInit,
-    headers: requestHeaders,
-    body,
-  })
+  const timeout = createTimeoutController(timeoutMs, requestInit.signal ?? undefined)
+  let response: Response
+
+  try {
+    response = await fetch(url, {
+      ...requestInit,
+      headers: requestHeaders,
+      body,
+      signal: timeout.signal,
+    })
+  }
+  catch (error) {
+    timeout.cleanup()
+
+    if (error instanceof Error && error.name === 'AbortError') {
+      if (timeout.didTimeout()) {
+        throw toApiClientError('Request timeout', {
+          correlationId: requestCorrelationId,
+          path: url,
+          status: 408,
+        })
+      }
+
+      throw toApiClientError('Request aborted', {
+        correlationId: requestCorrelationId,
+        path: url,
+      })
+    }
+
+    throw toApiClientError('Network error', {
+      correlationId: requestCorrelationId,
+      path: url,
+    })
+  }
+  finally {
+    timeout.cleanup()
+  }
 
   if (response.status === 401 && requiresAuth && retryOnUnauthorized) {
     const refreshed = await authService.refresh()
@@ -176,6 +330,7 @@ async function executeRequest<T>(
   }
 
   return {
+    correlationId: response.headers.get(CORRELATION_HEADER) ?? requestCorrelationId,
     config,
     data: await readResponseData<T>(response),
     headers: response.headers,
