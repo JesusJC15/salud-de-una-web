@@ -271,7 +271,21 @@ export const authService = {
   },
 
   async login(credentials: LoginDto, target: AuthLoginTarget = 'patient'): Promise<AuthResponseDto> {
-    return requestAuth(`/auth/${target}/login`, credentials, 'Login failed')
+    const authResponse = await fetchJson<AuthResponseDto>(
+      `${envConfig.apiBaseUrl}/auth/${target}/login`,
+      {
+        method: 'POST',
+        headers: JSON_HEADERS,
+        body: JSON.stringify(credentials),
+        credentials: 'include',
+      },
+      'Login failed',
+    )
+
+    // Keep existing token-based behavior while also enabling cookie-based auth
+    persistSession(authResponse)
+
+    return authResponse
   },
 
   async loginPatient(credentials: LoginDto): Promise<AuthResponseDto> {
@@ -300,6 +314,7 @@ export const authService = {
           method: 'POST',
           headers: JSON_HEADERS,
           body: JSON.stringify({ refreshToken }),
+          credentials: 'include',
         },
         'Logout failed',
       )
@@ -323,6 +338,7 @@ export const authService = {
           ...JSON_HEADERS,
           Authorization: `Bearer ${accessToken}`,
         },
+        credentials: 'include',
       },
       'Unable to fetch authenticated user',
     )
