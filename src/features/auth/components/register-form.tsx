@@ -3,7 +3,7 @@
 import { ArrowRight, ChevronDown } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useRouter } from 'next/navigation'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, type FormEvent } from 'react'
 import { staggerItem, staggerParent } from '@/components/animations/motion-presets'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,7 +23,7 @@ export default function RegisterForm() {
 
   const specialties = useMemo(() => Object.values(Specialty), [])
 
-  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     await submit()
   }
