@@ -1,90 +1,31 @@
 'use client'
 
-import type { RegisterDoctorDto } from '@/types'
 import { ArrowRight, ChevronDown } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useRouter } from 'next/navigation'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 import { staggerItem, staggerParent } from '@/components/animations/motion-presets'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { authService } from '@/services/auth-service'
+import { useRegisterDoctorForm } from '@/features/auth/hooks/use-register-doctor-form'
 import { Specialty } from '@/types/enums'
 import { SPECIALTY_LABELS } from '@/utils/specialty-labels'
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/
-
-const INITIAL_FORM: RegisterDoctorDto = {
-  firstName: '',
-  lastName: '',
-  email: '',
-  password: '',
-  specialty: Specialty.GENERAL_MEDICINE,
-  personalId: '',
-  phoneNumber: '',
-  professionalLicense: '',
-}
-
 export default function RegisterForm() {
   const router = useRouter()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [formData, setFormData] = useState<RegisterDoctorDto>(INITIAL_FORM)
+  const handleSuccess = useCallback(() => {
+    router.push('/dashboard')
+  }, [router])
+
+  const { loading, error, formData, updateField, submit } = useRegisterDoctorForm({
+    onSuccess: handleSuccess,
+  })
 
   const specialties = useMemo(() => Object.values(Specialty), [])
 
-  const updateField = (name: keyof RegisterDoctorDto, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }))
-    setError(null)
-  }
-
   const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setError(null)
-
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
-      setError('Completa los campos obligatorios')
-      return
-    }
-
-    if (!EMAIL_PATTERN.test(formData.email)) {
-      setError('Ingresa un correo valido')
-      return
-    }
-
-    if (formData.password.length < 8) {
-      setError('La contrasena debe tener minimo 8 caracteres')
-      return
-    }
-
-    if (!formData.personalId || !formData.phoneNumber) {
-      setError('Completa identificacion y telefono')
-      return
-    }
-
-    setLoading(true)
-    try {
-      await authService.registerStaff({
-        ...formData,
-        professionalLicense: formData.professionalLicense || undefined,
-      })
-
-      await authService.loginStaff({
-        email: formData.email,
-        password: formData.password,
-      })
-
-      router.push('/dashboard')
-    }
-    catch (err) {
-      setError(err instanceof Error ? err.message : 'No fue posible crear la cuenta')
-    }
-    finally {
-      setLoading(false)
-    }
+    await submit()
   }
 
   return (
@@ -114,7 +55,7 @@ export default function RegisterForm() {
           <Input
             id="lastName"
             name="lastName"
-            placeholder="Ej: Perez"
+            placeholder="Ej: Pérez"
             value={formData.lastName}
             onChange={e => updateField('lastName', e.target.value)}
             disabled={loading}
@@ -144,7 +85,7 @@ export default function RegisterForm() {
             id="password"
             type="password"
             name="password"
-            placeholder="Mínimo 8 caracteres"
+            placeholder="Mínimo 8, 1 mayúscula, 1 número y 1 símbolo"
             value={formData.password}
             onChange={e => updateField('password', e.target.value)}
             disabled={loading}
@@ -182,7 +123,9 @@ export default function RegisterForm() {
           <Input
             id="professionalLicense"
             name="professionalLicense"
-            placeholder="Numero de tarjeta (opcional)"
+            placeholder="Número de tarjeta (opcional)"
+            inputMode="numeric"
+            pattern="[0-9]*"
             value={formData.professionalLicense ?? ''}
             onChange={e => updateField('professionalLicense', e.target.value)}
             disabled={loading}
@@ -198,6 +141,8 @@ export default function RegisterForm() {
             id="personalId"
             name="personalId"
             placeholder="Número de identificación"
+            inputMode="numeric"
+            pattern="[0-9]*"
             value={formData.personalId}
             onChange={e => updateField('personalId', e.target.value)}
             disabled={loading}
@@ -211,6 +156,8 @@ export default function RegisterForm() {
             id="phoneNumber"
             name="phoneNumber"
             placeholder="Ej: 3001234567"
+            inputMode="numeric"
+            pattern="[0-9]*"
             value={formData.phoneNumber}
             onChange={e => updateField('phoneNumber', e.target.value)}
             disabled={loading}
