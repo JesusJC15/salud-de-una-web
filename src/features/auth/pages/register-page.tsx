@@ -146,6 +146,14 @@ export function RegisterPage() {
               />
               <div className="absolute inset-0 bg-linear-to-br from-primary/35 to-slate-900/70" />
               <div className="absolute inset-0 flex items-center justify-center px-8 text-center">
+                <div className="space-y-2 text-slate-50">
+                  <h3 className="text-lg font-semibold">
+                    Plataforma segura para profesionales
+                  </h3>
+                  <p className="text-sm text-slate-100/90">
+                    Validacion institucional y soporte continuo para tu practica de telemedicina.
+                  </p>
+                </div>
               </div>
             </motion.div>
           </aside>
@@ -156,6 +164,9 @@ export function RegisterPage() {
         className="border-t border-slate-200 bg-white px-6 py-8 md:px-10"
         variants={pageReveal}
       >
+        <p className="mx-auto max-w-[1100px] text-sm text-slate-500">
+          SaludDeUna &mdash; Plataforma para profesionales de la salud con validacion segura y acompanamiento continuo.
+        </p>
       </motion.footer>
     </motion.div>
   )
