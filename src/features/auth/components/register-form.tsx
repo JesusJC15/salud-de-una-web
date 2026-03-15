@@ -197,7 +197,7 @@ export default function RegisterForm() {
           <Input
             id="personalId"
             name="personalId"
-            placeholder="Numero de identificacion"
+            placeholder="Número de identificación"
             value={formData.personalId}
             onChange={e => updateField('personalId', e.target.value)}
             disabled={loading}
@@ -206,7 +206,7 @@ export default function RegisterForm() {
         </label>
 
         <label htmlFor="phoneNumber" className="flex flex-col gap-2">
-          <span className="text-sm font-semibold text-slate-700">Telefono</span>
+          <span className="text-sm font-semibold text-slate-700">Teléfono</span>
           <Input
             id="phoneNumber"
             name="phoneNumber"
