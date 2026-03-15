@@ -125,7 +125,7 @@ export default function RegisterForm() {
 
       <motion.div className="grid grid-cols-1 gap-6 md:grid-cols-2" variants={staggerItem}>
         <label htmlFor="email" className="flex flex-col gap-2">
-          <span className="text-sm font-semibold text-slate-700">Correo electronico profesional</span>
+          <span className="text-sm font-semibold text-slate-700">Correo electrónico profesional</span>
           <Input
             id="email"
             type="email"
@@ -139,12 +139,12 @@ export default function RegisterForm() {
         </label>
 
         <label htmlFor="password" className="flex flex-col gap-2">
-          <span className="text-sm font-semibold text-slate-700">Contrasena</span>
+          <span className="text-sm font-semibold text-slate-700">Contraseña</span>
           <Input
             id="password"
             type="password"
             name="password"
-            placeholder="Minimo 8 caracteres"
+            placeholder="Mínimo 8 caracteres"
             value={formData.password}
             onChange={e => updateField('password', e.target.value)}
             disabled={loading}
