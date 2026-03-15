@@ -57,8 +57,6 @@ export function RegisterPage() {
           </div>
 
           <div className="flex items-center gap-5 md:gap-8">
-            <nav className="hidden items-center gap-6 md:flex">
-            </nav>
             <div className="hidden h-6 w-px bg-slate-200 md:block"></div>
             <Link
               href="/login"
