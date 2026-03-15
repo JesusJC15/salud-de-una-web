@@ -14,17 +14,17 @@ const VALIDATION_STEPS = [
   {
     title: 'Cruce de datos REThUS',
     description:
-      'Validamos automaticamente su identidad y especialidad con la base de datos oficial del Ministerio de Salud.',
+      'Validamos automáticamente su identidad y especialidad con la base de datos oficial del Ministerio de Salud.',
   },
   {
-    title: 'Verificacion de Documentos',
+    title: 'Verificación de Documentos',
     description:
-      'Nuestro equipo legal revisa su tarjeta profesional y antecedentes etico-profesionales.',
+      'Nuestro equipo legal revisa su tarjeta profesional y antecedentes ético-profesionales.',
   },
   {
-    title: 'Activacion de Perfil',
+    title: 'Activación de Perfil',
     description:
-      'Una vez validado, podra configurar sus horarios de atencion y recibir pacientes en menos de 24 horas.',
+      'Una vez validado, podrá configurar sus horarios de atención y recibir pacientes en menos de 24 horas.',
   },
 ]
 
@@ -105,7 +105,7 @@ export function RegisterPage() {
                 <div className="flex size-10 items-center justify-center rounded-full bg-teal-500 text-white">
                   <Info className="h-5 w-5" />
                 </div>
-                <h3 className="text-2xl font-bold tracking-tight">Proceso de Validacion</h3>
+                <h3 className="text-2xl font-bold tracking-tight">Proceso de Validación</h3>
               </div>
 
               <div className="space-y-6">
@@ -126,7 +126,7 @@ export function RegisterPage() {
                 <div className="flex items-start gap-3 rounded-xl bg-white/70 p-4">
                   <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
                   <p className="text-xs text-slate-500 italic">
-                    Nota: El registro en REThUS es obligatorio para ejercer profesiones de salud en el territorio nacional segun la Ley 1164 de 2007.
+                    Nota: El registro en REThUS es obligatorio para ejercer profesiones de salud en el territorio nacional según la Ley 1164 de 2007.
                   </p>
                 </div>
               </div>
