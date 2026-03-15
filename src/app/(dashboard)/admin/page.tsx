@@ -1,0 +1,5 @@
+import { AdminDashboardPage as AdminDashboardFeaturePage } from '@/features/admin-dashboard/pages/admin-dashboard-page'
+
+export default function AdminDashboardPage() {
+  return <AdminDashboardFeaturePage />
+}
