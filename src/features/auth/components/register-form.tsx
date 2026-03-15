@@ -246,7 +246,7 @@ export default function RegisterForm() {
       </motion.div>
 
       <motion.p className="text-center text-sm text-slate-500" variants={staggerItem}>
-        Ya tienes una cuenta?
+        ¿Ya tienes una cuenta?
         {' '}
         <button
           type="button"
