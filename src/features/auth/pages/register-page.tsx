@@ -79,10 +79,10 @@ export function RegisterPage() {
                 Portal de Profesionales
               </motion.span>
               <motion.h1 className="text-4xl leading-tight font-black tracking-tight" variants={staggerItem}>
-                Registro para Medicos
+                Registro para Médicos
               </motion.h1>
               <motion.p className="max-w-xl text-lg text-slate-600" variants={staggerItem}>
-                Unete a la red de profesionales de SaludDeUna. Ingresa tus datos oficiales para comenzar el proceso de validacion institucional.
+                Únete a la red de profesionales de SaludDeUna. Ingresa tus datos oficiales para comenzar el proceso de validación institucional.
               </motion.p>
             </motion.div>
 
@@ -149,7 +149,7 @@ export function RegisterPage() {
                     Plataforma segura para profesionales
                   </h3>
                   <p className="text-sm text-slate-100/90">
-                    Validacion institucional y soporte continuo para tu practica de telemedicina.
+                    Validación institucional y soporte continuo para tu práctica de telemedicina.
                   </p>
                 </div>
               </div>
@@ -163,7 +163,7 @@ export function RegisterPage() {
         variants={pageReveal}
       >
         <p className="mx-auto max-w-[1100px] text-sm text-slate-500">
-          SaludDeUna &mdash; Plataforma para profesionales de la salud con validacion segura y acompanamiento continuo.
+          SaludDeUna &mdash; Plataforma para profesionales de la salud con validación segura y acompañamiento continuo.
         </p>
       </motion.footer>
     </motion.div>

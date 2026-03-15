@@ -3,7 +3,7 @@ import { translateEnumValue } from './enum-labels'
 
 export const SPECIALTY_LABELS: Record<Specialty, string> = {
   [Specialty.GENERAL_MEDICINE]: 'Medicina general',
-  [Specialty.ODONTOLOGY]: 'Odontologia',
+  [Specialty.ODONTOLOGY]: 'Odontología',
 }
 
 export function translateSpecialty(type: string | undefined): string {
