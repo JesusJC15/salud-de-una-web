@@ -178,11 +178,11 @@ export default function RegisterForm() {
         </label>
 
         <label htmlFor="professionalLicense" className="flex flex-col gap-2">
-          <span className="text-sm font-semibold text-slate-700">Tarjeta Profesional</span>
+          <span className="text-sm font-semibold text-slate-700">Tarjeta Profesional (opcional)</span>
           <Input
             id="professionalLicense"
             name="professionalLicense"
-            placeholder="Numero de tarjeta"
+            placeholder="Numero de tarjeta (opcional)"
             value={formData.professionalLicense ?? ''}
             onChange={e => updateField('professionalLicense', e.target.value)}
             disabled={loading}
