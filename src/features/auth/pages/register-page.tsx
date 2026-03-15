@@ -64,7 +64,7 @@ export function RegisterPage() {
               href="/login"
               className="inline-flex h-14 items-center justify-center rounded-xl bg-linear-to-r from-aquamarine to-primary px-5 text-base font-bold text-white shadow-lg shadow-aquamarine/20 transition-all hover:shadow-aquamarine/30"
             >
-              Iniciar Sesion
+              Iniciar sesión
             </Link>
           </div>
         </div>
