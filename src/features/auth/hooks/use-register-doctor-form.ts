@@ -1,8 +1,11 @@
+import type { RegisterFormClientGuardsInput } from '@/features/auth/validators/validate-register-doctor-form'
 import type { RegisterDoctorDto } from '@/types'
 import { useCallback, useState } from 'react'
 import { INITIAL_REGISTER_DOCTOR_FORM } from '@/features/auth/constants/register-doctor-form'
 import { sanitizeRegisterDoctorField } from '@/features/auth/utils/sanitize-register-doctor-field'
-import { validateRegisterDoctorForm } from '@/features/auth/validators/validate-register-doctor-form'
+import {
+  validateRegisterDoctorForm,
+} from '@/features/auth/validators/validate-register-doctor-form'
 import { authService } from '@/services/auth-service'
 
 interface UseRegisterDoctorFormOptions {
@@ -26,10 +29,14 @@ export function useRegisterDoctorForm(options: UseRegisterDoctorFormOptions = {}
     setError(null)
   }, [])
 
-  const submit = useCallback(async () => {
+  const clearError = useCallback(() => {
+    setError(null)
+  }, [])
+
+  const submit = useCallback(async (clientGuards?: RegisterFormClientGuardsInput) => {
     setError(null)
 
-    const validationError = validateRegisterDoctorForm(formData)
+    const validationError = validateRegisterDoctorForm(formData, clientGuards)
     if (validationError) {
       setError(validationError)
       return
@@ -61,6 +68,7 @@ export function useRegisterDoctorForm(options: UseRegisterDoctorFormOptions = {}
     loading,
     error,
     formData,
+    clearError,
     updateField,
     submit,
   }
