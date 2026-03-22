@@ -108,16 +108,17 @@ export function RegisterPage() {
             >
               <div className="relative z-10">
                 <h3 className="text-2xl font-bold">¿Necesitas ayuda?</h3>
+              
                 <p className="mt-3 text-sm leading-relaxed text-teal-50">
                   Nuestro equipo de soporte está disponible para asistirte con tu registro profesional 24/7.
                 </p>
-                <button
-                  type="button"
-                  className="mt-6 inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-sm font-semibold backdrop-blur-sm transition-colors hover:bg-white/30"
+              
+                <div
+                  className="mt-6 inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-sm font-semibold backdrop-blur-sm"
                 >
-                  <Headset className="h-4 w-4" />
+                  <Headset className="h-4 w-4" aria-hidden="true" />
                   Contactar Soporte
-                </button>
+                </div>
               </div>
 
               <div className="pointer-events-none absolute -right-8 -bottom-8 opacity-20">
