@@ -34,9 +34,10 @@ export default function RegisterForm() {
 
   const specialties = useMemo(() => Object.values(Specialty), [])
 
-  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    void submit({
+  
+    await submit({
       confirmPassword,
       acceptedTerms: acceptTerms,
     })
