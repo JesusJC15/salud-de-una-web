@@ -2,6 +2,7 @@
 
 import type { ComponentType } from 'react'
 import { Activity, LayoutDashboard, LogOut, Settings, ShieldQuestion, Stethoscope, Users } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -26,12 +27,22 @@ const navigationItems: NavigationItem[] = [
   { key: 'analytics', label: 'Analitica', icon: Activity },
 ]
 
+const NAVIGATION_ROUTES: Record<NavigationItem['key'], string> = {
+  dashboard: '/dashboard/admin',
+  doctors: '/dashboard/admin/doctors/verification',
+  users: '/dashboard/admin/users',
+  settings: '/dashboard/admin/settings',
+  analytics: '/dashboard/admin/analytics',
+}
+
 export function SidebarNavigation({
   activeItem = 'dashboard',
   className,
   onLogout,
   onSupport,
 }: SidebarNavigationProps) {
+  const router = useRouter()
+
   return (
     <aside className={cn('flex h-full min-h-screen w-full max-w-[260px] flex-col border-r border-slate-200 bg-white/95 dark:border-slate-800 dark:bg-slate-900/95', className)}>
       <div className="px-6 pt-6">
@@ -51,6 +62,7 @@ export function SidebarNavigation({
               <li key={item.key}>
                 <button
                   type="button"
+                  onClick={() => router.push(NAVIGATION_ROUTES[item.key])}
                   className={cn(
                     'group flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold transition-colors',
                     isActive
