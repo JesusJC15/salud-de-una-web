@@ -44,6 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 ```
 
 Use in CSS:
+
 ```css
 body {
   font-family: var(--font-inter);
@@ -52,6 +53,7 @@ body {
 code {
   font-family: var(--font-roboto-mono);
 }
+
 ```
 
 ## Font Weights and Styles
@@ -66,7 +68,11 @@ const inter = Inter({
 // Multiple weights
 const inter = Inter({
   subsets: ['latin'],
-  weight: ['400', '500', '700'],
+  weight: [
+    '400',
+    '500',
+    '700'
+  ],
 })
 
 // Variable font (recommended) - includes all weights
@@ -156,7 +162,13 @@ Only load needed character subsets:
 const inter = Inter({ subsets: ['latin'] })
 
 // Multiple subsets
-const inter = Inter({ subsets: ['latin', 'latin-ext', 'cyrillic'] })
+const inter = Inter({
+  subsets: [
+    'latin',
+    'latin-ext',
+    'cyrillic'
+  ]
+})
 ```
 
 ## Display Strategy
@@ -233,11 +245,11 @@ const inter = Inter({ subsets: ['latin'] })
 // lib/fonts.ts
 import { Inter, Playfair_Display } from 'next/font/google'
 
-export const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
-export const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' })
-
 // components/Heading.tsx
 import { playfair } from '@/lib/fonts'
+
+export const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+export const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' })
 
 export function Heading({ children }) {
   return <h1 className={playfair.className}>{children}</h1>

@@ -8,10 +8,10 @@ Always use `next/script` instead of native `<script>` tags for better performanc
 
 ```tsx
 // Bad: Native script tag
-<script src="https://example.com/script.js"></script>
-
 // Good: Next.js Script component
 import Script from 'next/script'
+
+<script src="https://example.com/script.js"></script>
 
 <Script src="https://example.com/script.js" />
 ```
@@ -118,10 +118,10 @@ export default function Layout({ children }) {
 // YouTube embed
 import { YouTubeEmbed } from '@next/third-parties/google'
 
-<YouTubeEmbed videoid="dQw4w9WgXcQ" />
-
 // Google Maps
 import { GoogleMapsEmbed } from '@next/third-parties/google'
+
+<YouTubeEmbed videoid="dQw4w9WgXcQ" />
 
 <GoogleMapsEmbed
   apiKey="YOUR_API_KEY"
@@ -132,10 +132,10 @@ import { GoogleMapsEmbed } from '@next/third-parties/google'
 
 ## Quick Reference
 
-| Pattern | Issue | Fix |
-|---------|-------|-----|
-| `<script src="...">` | No optimization | Use `next/script` |
-| `<Script>` without id | Can't track inline scripts | Add `id` attribute |
-| `<Script>` inside `<Head>` | Wrong placement | Move outside Head |
-| Inline GA/GTM scripts | No optimization | Use `@next/third-parties` |
-| `strategy="beforeInteractive"` outside layout | Won't work | Only use in root layout |
+| Pattern                                       | Issue                      | Fix                       |
+| --------------------------------------------- | -------------------------- | ------------------------- |
+| `<script src="...">`                          | No optimization            | Use `next/script`         |
+| `<Script>` without id                         | Can't track inline scripts | Add `id` attribute        |
+| `<Script>` inside `<Head>`                    | Wrong placement            | Move outside Head         |
+| Inline GA/GTM scripts                         | No optimization            | Use `@next/third-parties` |
+| `strategy="beforeInteractive"` outside layout | Won't work                 | Only use in root layout   |

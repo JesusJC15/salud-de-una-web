@@ -59,7 +59,9 @@ const DEFAULT_TIMEOUT_MS = 15_000
 const CORRELATION_HEADER = 'x-correlation-id'
 
 function normalizeSegment(value: string) {
-  return value.replace(LEADING_SLASHES_PATTERN, '')
+  return value
+    .replace(LEADING_SLASHES_PATTERN, '')
+    .replace(TRAILING_SLASHES_PATTERN, '')
 }
 
 function normalizeBaseUrl(value: string) {

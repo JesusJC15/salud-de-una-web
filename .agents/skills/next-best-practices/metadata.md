@@ -7,6 +7,7 @@ Add SEO metadata to Next.js pages using the Metadata API.
 The `metadata` object and `generateMetadata` function are **only supported in Server Components**. They cannot be used in Client Components.
 
 If the target page has `'use client'`:
+
 1. Remove `'use client'` if possible, move client logic to child components
 2. Or extract metadata to a parent Server Component layout
 3. Or split the file: Server Component with metadata imports Client Components
@@ -27,7 +28,7 @@ export const metadata: Metadata = {
 ```tsx
 import type { Metadata } from 'next'
 
-type Props = { params: Promise<{ slug: string }> }
+interface Props { params: Promise<{ slug: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
@@ -83,16 +84,16 @@ Reference: https://nextjs.org/docs/app/getting-started/project-structure#metadat
 
 Place these files in `app/` directory (or route segments):
 
-| File | Purpose |
-|------|---------|
-| `favicon.ico` | Favicon |
-| `icon.png` / `icon.svg` | App icon |
-| `apple-icon.png` | Apple app icon |
-| `opengraph-image.png` | OG image |
-| `twitter-image.png` | Twitter card image |
-| `sitemap.ts` / `sitemap.xml` | Sitemap (use `generateSitemaps` for multiple) |
-| `robots.ts` / `robots.txt` | Robots directives |
-| `manifest.ts` / `manifest.json` | Web app manifest |
+| File                            | Purpose                                       |
+| ------------------------------- | --------------------------------------------- |
+| `favicon.ico`                   | Favicon                                       |
+| `icon.png` / `icon.svg`         | App icon                                      |
+| `apple-icon.png`                | Apple app icon                                |
+| `opengraph-image.png`           | OG image                                      |
+| `twitter-image.png`             | Twitter card image                            |
+| `sitemap.ts` / `sitemap.xml`    | Sitemap (use `generateSitemaps` for multiple) |
+| `robots.ts` / `robots.txt`      | Robots directives                             |
+| `manifest.ts` / `manifest.json` | Web app manifest                              |
 
 ## SEO Best Practice: Static Files Are Often Enough
 
@@ -108,6 +109,7 @@ app/
 ```
 
 **Tips:**
+
 - A single `opengraph-image.png` covers both Open Graph and Twitter (Twitter falls back to OG)
 - Static `title` and `description` in layout metadata is sufficient for most pages
 - Only use dynamic `generateMetadata` when content varies per page
@@ -175,7 +177,7 @@ export const alt = 'Blog Post'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
-type Props = { params: Promise<{ slug: string }> }
+interface Props { params: Promise<{ slug: string }> }
 
 export default async function Image({ params }: Props) {
   const { slug } = await params
@@ -209,9 +211,9 @@ export default async function Image({ params }: Props) {
 ## Custom Fonts
 
 ```tsx
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { ImageResponse } from 'next/og'
-import { join } from 'path'
-import { readFile } from 'fs/promises'
 
 export default async function Image() {
   const fontPath = join(process.cwd(), 'assets/fonts/Inter-Bold.ttf')
@@ -240,6 +242,7 @@ export default async function Image() {
 ## Styling Notes
 
 ImageResponse uses Flexbox layout:
+
 - Use `display: 'flex'`
 - No CSS Grid support
 - Styles must be inline objects
@@ -279,7 +282,11 @@ import type { MetadataRoute } from 'next'
 
 export async function generateSitemaps() {
   // Return array of sitemap IDs
-  return [{ id: 0 }, { id: 1 }, { id: 2 }]
+  return [
+    { id: 0 },
+    { id: 1 },
+    { id: 2 }
+  ]
 }
 
 export default async function sitemap({
@@ -291,7 +298,7 @@ export default async function sitemap({
   const end = start + 50000
   const products = await getProducts(start, end)
 
-  return products.map((product) => ({
+  return products.map(product => ({
     url: `https://example.com/product/${product.id}`,
     lastModified: product.updatedAt,
   }))

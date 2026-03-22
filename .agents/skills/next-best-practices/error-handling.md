@@ -107,6 +107,7 @@ async function createPost(formData: FormData) {
 ```
 
 Same applies to:
+
 - `redirect()` - 307 temporary redirect
 - `permanentRedirect()` - 308 permanent redirect
 - `notFound()` - 404 not found
@@ -122,7 +123,8 @@ async function action() {
   try {
     // ...
     redirect('/success')
-  } catch (error) {
+  }
+  catch (error) {
     unstable_rethrow(error) // Re-throws Next.js internal errors
     return { error: 'Something went wrong' }
   }
@@ -132,7 +134,7 @@ async function action() {
 ## Redirects
 
 ```tsx
-import { redirect, permanentRedirect } from 'next/navigation'
+import { permanentRedirect, redirect } from 'next/navigation'
 
 // 307 Temporary - use for most cases
 redirect('/new-path')
@@ -204,7 +206,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const post = await getPost(id)
 
   if (!post) {
-    notFound()  // Renders closest not-found.tsx
+    notFound() // Renders closest not-found.tsx
   }
 
   return <div>{post.title}</div>

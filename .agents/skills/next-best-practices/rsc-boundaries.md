@@ -35,7 +35,7 @@ export function UserProfile({ user }: { user: User }) {
 ```tsx
 // Bad: async arrow function client component
 'use client'
-const Dashboard = async () => {
+async function Dashboard() {
   const data = await fetchDashboard()
   return <div>{data}</div>
 }
@@ -48,6 +48,7 @@ const Dashboard = async () => {
 Props passed from Server → Client must be JSON-serializable.
 
 **Detect:** Server component passes these to a client component:
+
 - Functions (except Server Actions with `'use server'`)
 - `Date` objects
 - `Map`, `Set`, `WeakMap`, `WeakSet`
@@ -127,14 +128,14 @@ Functions marked with `'use server'` CAN be passed to client components.
 ```tsx
 // Valid: Server Action can be passed
 // actions.ts
+// page.tsx (server)
+import { submitForm } from './actions'
+
 'use server'
 export async function submitForm(formData: FormData) {
   // server-side logic
 }
-
-// page.tsx (server)
-import { submitForm } from './actions'
-export default function Page() {
+export default async function Page() {
   return <ClientForm onSubmit={submitForm} /> // OK!
 }
 
@@ -147,13 +148,13 @@ export function ClientForm({ onSubmit }: { onSubmit: (data: FormData) => Promise
 
 ## Quick Reference
 
-| Pattern | Valid? | Fix |
-|---------|--------|-----|
-| `'use client'` + `async function` | No | Fetch in server parent, pass data |
-| Pass `() => {}` to client | No | Define in client or use server action |
-| Pass `new Date()` to client | No | Use `.toISOString()` |
-| Pass `new Map()` to client | No | Convert to object/array |
-| Pass class instance to client | No | Pass plain object |
-| Pass server action to client | Yes | - |
-| Pass `string/number/boolean` | Yes | - |
-| Pass plain object/array | Yes | - |
+| Pattern                           | Valid? | Fix                                   |
+| --------------------------------- | ------ | ------------------------------------- |
+| `'use client'` + `async function` | No     | Fetch in server parent, pass data     |
+| Pass `() => {}` to client         | No     | Define in client or use server action |
+| Pass `new Date()` to client       | No     | Use `.toISOString()`                  |
+| Pass `new Map()` to client        | No     | Convert to object/array               |
+| Pass class instance to client     | No     | Pass plain object                     |
+| Pass server action to client      | Yes    | -                                     |
+| Pass `string/number/boolean`      | Yes    | -                                     |
+| Pass plain object/array           | Yes    | -                                     |

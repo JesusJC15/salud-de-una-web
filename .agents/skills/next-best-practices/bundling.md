@@ -20,15 +20,15 @@ Module not found: Can't resolve 'fs'
 If the package is only needed on client:
 
 ```tsx
+// Good: Use dynamic import with ssr: false
+import dynamic from 'next/dynamic'
+
 // Bad: Fails - package uses window
 import SomeChart from 'some-chart-library'
 
 export default function Page() {
   return <SomeChart />
 }
-
-// Good: Use dynamic import with ssr: false
-import dynamic from 'next/dynamic'
 
 const SomeChart = dynamic(() => import('some-chart-library'), {
   ssr: false,
@@ -51,6 +51,7 @@ module.exports = {
 ```
 
 Use this for:
+
 - Packages with native bindings (sharp, bcrypt)
 - Packages that don't bundle well (some ORMs)
 - Packages with circular dependencies
@@ -65,12 +66,12 @@ Wrap the entire usage in a client component:
 
 import { Chart } from 'chart-library'
 
+// app/page.tsx (server component)
+import { ChartWrapper } from '@/components/ChartWrapper'
+
 export function ChartWrapper(props) {
   return <Chart {...props} />
 }
-
-// app/page.tsx (server component)
-import { ChartWrapper } from '@/components/ChartWrapper'
 
 export default function Page() {
   return <ChartWrapper data={data} />
@@ -82,14 +83,14 @@ export default function Page() {
 Import CSS files instead of using `<link>` tags. Next.js handles bundling and optimization.
 
 ```tsx
-// Bad: Manual link tag
-<link rel="stylesheet" href="/styles.css" />
+// Good: CSS Modules
+import styles from './Button.module.css'
 
+// Bad: Manual link tag
 // Good: Import CSS
 import './styles.css'
 
-// Good: CSS Modules
-import styles from './Button.module.css'
+<link rel="stylesheet" href="/styles.css" />
 ```
 
 ## Polyfills
@@ -126,16 +127,16 @@ module.exports = {
 
 ## Common Problematic Packages
 
-| Package | Issue | Solution |
-|---------|-------|----------|
-| `sharp` | Native bindings | `serverExternalPackages: ['sharp']` |
-| `bcrypt` | Native bindings | `serverExternalPackages: ['bcrypt']` or use `bcryptjs` |
-| `canvas` | Native bindings | `serverExternalPackages: ['canvas']` |
-| `recharts` | Uses window | `dynamic(() => import('recharts'), { ssr: false })` |
-| `react-quill` | Uses document | `dynamic(() => import('react-quill'), { ssr: false })` |
-| `mapbox-gl` | Uses window | `dynamic(() => import('mapbox-gl'), { ssr: false })` |
-| `monaco-editor` | Uses window | `dynamic(() => import('@monaco-editor/react'), { ssr: false })` |
-| `lottie-web` | Uses document | `dynamic(() => import('lottie-react'), { ssr: false })` |
+| Package         | Issue           | Solution                                                        |
+| --------------- | --------------- | --------------------------------------------------------------- |
+| `sharp`         | Native bindings | `serverExternalPackages: ['sharp']`                             |
+| `bcrypt`        | Native bindings | `serverExternalPackages: ['bcrypt']` or use `bcryptjs`          |
+| `canvas`        | Native bindings | `serverExternalPackages: ['canvas']`                            |
+| `recharts`      | Uses window     | `dynamic(() => import('recharts'), { ssr: false })`             |
+| `react-quill`   | Uses document   | `dynamic(() => import('react-quill'), { ssr: false })`          |
+| `mapbox-gl`     | Uses window     | `dynamic(() => import('mapbox-gl'), { ssr: false })`            |
+| `monaco-editor` | Uses window     | `dynamic(() => import('@monaco-editor/react'), { ssr: false })` |
+| `lottie-web`    | Uses document   | `dynamic(() => import('lottie-react'), { ssr: false })`         |
 
 ## Bundle Analysis
 
@@ -146,6 +147,7 @@ next experimental-analyze
 ```
 
 This opens an interactive UI to:
+
 - Filter by route, environment (client/server), and type
 - Inspect module sizes and import chains
 - View treemap visualization
