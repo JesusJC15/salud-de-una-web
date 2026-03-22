@@ -22,6 +22,12 @@ export function DashboardPage() {
         }
 
         const userData = await authService.getMe()
+
+        if (userData.user.role === 'ADMIN') {
+          router.push('/dashboard/admin')
+          return
+        }
+
         setUser(userData.user)
       }
       catch (error) {

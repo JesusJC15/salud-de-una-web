@@ -4,6 +4,7 @@ import { HeartPulse } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
+import { resolveDashboardRoute } from '@/features/auth/utils/resolve-dashboard-route'
 import { authService } from '@/services/auth-service'
 
 export function HomeRedirectPage() {
@@ -11,7 +12,8 @@ export function HomeRedirectPage() {
 
   useEffect(() => {
     if (authService.isAuthenticated()) {
-      router.push('/dashboard')
+      const role = authService.getCurrentUser()?.role
+      router.push(resolveDashboardRoute(role))
     }
     else {
       router.push('/login')

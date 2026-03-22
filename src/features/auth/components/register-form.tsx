@@ -8,6 +8,7 @@ import { useMemo, useState } from 'react'
 import { staggerItem, staggerParent } from '@/components/animations/motion-presets'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { resolveDashboardRoute } from '@/features/auth/utils/resolve-dashboard-route'
 import { authService } from '@/services/auth-service'
 import { Specialty } from '@/types/enums'
 import { SPECIALTY_LABELS } from '@/utils/specialty-labels'
@@ -72,12 +73,12 @@ export default function RegisterForm() {
         professionalLicense: formData.professionalLicense || undefined,
       })
 
-      await authService.loginStaff({
+      const session = await authService.loginStaff({
         email: formData.email,
         password: formData.password,
       })
 
-      router.push('/dashboard')
+      router.push(resolveDashboardRoute(session.user?.role))
     }
     catch (err) {
       setError(err instanceof Error ? err.message : 'No fue posible crear la cuenta')

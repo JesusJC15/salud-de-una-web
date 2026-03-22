@@ -9,6 +9,7 @@ import { staggerItem, staggerParent } from '@/components/animations/motion-prese
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { authService } from '@/services/auth-service'
+import { resolveDashboardRoute } from '@/features/auth/utils/resolve-dashboard-route'
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/
 
@@ -56,8 +57,7 @@ export default function LoginForm() {
       const response = await authService.loginStaff(formData)
 
       if (response?.accessToken) {
-        // Redirigir al dashboard
-        router.push('/dashboard')
+        router.push(resolveDashboardRoute(response.user?.role))
       }
     }
     catch (err) {

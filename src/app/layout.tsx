@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import { Toaster } from 'react-hot-toast'
 import { cn } from '@/lib/utils'
 import './globals.css'
 
@@ -36,6 +37,19 @@ export default function RootLayout({
           <div className="relative z-10 flex flex-1 flex-col">
             {children}
           </div>
+
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 3500,
+              style: {
+                border: '1px solid #dbeafe',
+                borderRadius: '0.75rem',
+                background: '#ffffff',
+                color: '#0f172a',
+              },
+            }}
+          />
 
           <div className="pointer-events-none absolute bottom-4 left-4 z-0 rotate-12 opacity-10">
             <span className="material-symbols-outlined text-6xl text-aquamarine">

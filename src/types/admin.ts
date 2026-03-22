@@ -39,6 +39,14 @@ export interface RethusVerifyDto {
   notes?: string
 }
 
+export type RethusVerificationAction = 'APPROVE' | 'REJECT'
+
+export interface RethusVerifyDecisionDto {
+  action: RethusVerificationAction
+  notes: string
+  evidenceUrl?: string
+}
+
 export interface DoctorsForReviewSummary {
   total: number
   pending: number
@@ -68,6 +76,7 @@ export interface DoctorReviewItem {
   email: string
   specialty: Specialty
   doctorStatus: DoctorStatus
+  rethusNumber?: string
   professionalLicense?: string
   personalId: string
   phoneNumber: string

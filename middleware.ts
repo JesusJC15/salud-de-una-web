@@ -1,6 +1,9 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 
+const ROLE_CLAIM = 'role'
+const ROLE_USER_COOKIE = 'salud-de-una.user'
+
 function applySecurityHeaders(res: NextResponse) {
   res.headers.set('X-Frame-Options', 'DENY')
   res.headers.set('X-Content-Type-Options', 'nosniff')
@@ -15,8 +18,65 @@ function applySecurityHeaders(res: NextResponse) {
   )
 }
 
+function decodeBase64Url(value: string) {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/')
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=')
+  return atob(padded)
+}
+
+function getRoleFromAuthorization(request: NextRequest) {
+  const authorization = request.headers.get('authorization')
+  if (!authorization?.startsWith('Bearer ')) {
+    return null
+  }
+
+  try {
+    const token = authorization.slice(7)
+    const payload = token.split('.')[1]
+    if (!payload) {
+      return null
+    }
+
+    const decodedPayload = JSON.parse(decodeBase64Url(payload)) as Record<string, unknown>
+    const role = decodedPayload[ROLE_CLAIM]
+    return typeof role === 'string' ? role : null
+  }
+  catch {
+    return null
+  }
+}
+
+function getRoleFromUserCookie(request: NextRequest) {
+  const userCookie = request.cookies.get(ROLE_USER_COOKIE)?.value
+  if (!userCookie) {
+    return null
+  }
+
+  try {
+    const decoded = decodeURIComponent(userCookie)
+    const userPayload = JSON.parse(decoded) as Record<string, unknown>
+    const role = userPayload[ROLE_CLAIM]
+    return typeof role === 'string' ? role : null
+  }
+  catch {
+    return null
+  }
+}
+
+function resolveRequestRole(request: NextRequest) {
+  return getRoleFromAuthorization(request) ?? getRoleFromUserCookie(request)
+}
+
 export async function middleware(req: NextRequest) {
-  void req
+  if (req.nextUrl.pathname.startsWith('/admin')) {
+    const role = resolveRequestRole(req)
+
+    if (role && role !== 'ADMIN') {
+      const forbiddenUrl = new URL('/403', req.url)
+      return NextResponse.redirect(forbiddenUrl)
+    }
+  }
+
   const next = NextResponse.next()
   applySecurityHeaders(next)
   return next

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { cardPopIn, floatingTransition, pageReveal, staggerItem, staggerParent } from '@/components/animations/motion-presets'
 import LoginForm from '@/features/auth/components/login-form'
+import { resolveDashboardRoute } from '@/features/auth/utils/resolve-dashboard-route'
 import { authService } from '@/services/auth-service'
 
 export function LoginPage() {
@@ -13,7 +14,8 @@ export function LoginPage() {
 
   useEffect(() => {
     if (authService.isAuthenticated()) {
-      router.push('/dashboard')
+      const role = authService.getCurrentUser()?.role
+      router.push(resolveDashboardRoute(role))
     }
   }, [router])
 

@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { cardPopIn, pageReveal, staggerItem, staggerParent } from '@/components/animations/motion-presets'
 import RegisterForm from '@/features/auth/components/register-form'
+import { resolveDashboardRoute } from '@/features/auth/utils/resolve-dashboard-route'
 import { authService } from '@/services/auth-service'
 
 const VALIDATION_STEPS = [
@@ -33,7 +34,8 @@ export function RegisterPage() {
 
   useEffect(() => {
     if (authService.isAuthenticated()) {
-      router.push('/dashboard')
+      const role = authService.getCurrentUser()?.role
+      router.push(resolveDashboardRoute(role))
     }
   }, [router])
 
