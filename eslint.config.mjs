@@ -7,9 +7,15 @@ export default antfu(
     react: true,
     typescript: true,
     ignores: [
-      'node_modules/*',
-      'templates/*',
-      '.codex/*',
+      'node_modules/**',
+      '.next/**',
+      'coverage/**',
+      'dist/**',
+      'templates/**',
+      '.agents/**',
+      '.codex/**',
+      '.sonarlint/**',
+      '.vscode/**',
     ],
     rules: {
       '@tanstack/query/exhaustive-deps': 'error',
@@ -18,6 +24,7 @@ export default antfu(
       '@tanstack/query/no-unstable-deps': 'error',
       '@tanstack/query/infinite-query-property-order': 'error',
       '@tanstack/query/no-void-query-fn': 'error',
+      'e18e/ban-dependencies': 'off',
       '@stylistic/indent': ['warn', 2],
       '@stylistic/max-len': [
         'warn',

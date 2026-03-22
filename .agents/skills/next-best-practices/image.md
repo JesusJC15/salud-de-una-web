@@ -6,10 +6,10 @@ Use `next/image` for automatic image optimization.
 
 ```tsx
 // Bad: Avoid native img
-<img src="/hero.png" alt="Hero" />
-
 // Good: Use next/image
 import Image from 'next/image'
+
+<img src="/hero.png" alt="Hero" />
 <Image src="/hero.png" alt="Hero" width={800} height={400} />
 ```
 
@@ -165,7 +165,7 @@ module.exports = {
 }
 
 // Option 3: Custom loader (Cloudinary, Imgix, etc.)
-const cloudinaryLoader = ({ src, width, quality }) => {
+function cloudinaryLoader({ src, width, quality }) {
   return `https://res.cloudinary.com/demo/image/upload/w_${width},q_${quality || 75}/${src}`
 }
 

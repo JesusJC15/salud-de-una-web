@@ -9,7 +9,7 @@ Always type them as `Promise<...>` and await them.
 ### Pages and Layouts
 
 ```tsx
-type Props = { params: Promise<{ slug: string }> }
+interface Props { params: Promise<{ slug: string }> }
 
 export default async function Page({ params }: Props) {
   const { slug } = await params
@@ -30,7 +30,7 @@ export async function GET(
 ### SearchParams
 
 ```tsx
-type Props = {
+interface Props {
   params: Promise<{ slug: string }>
   searchParams: Promise<{ query?: string }>
 }
@@ -48,7 +48,7 @@ Use `React.use()` for non-async components:
 ```tsx
 import { use } from 'react'
 
-type Props = { params: Promise<{ slug: string }> }
+interface Props { params: Promise<{ slug: string }> }
 
 export default function Page({ params }: Props) {
   const { slug } = use(params)
@@ -58,7 +58,7 @@ export default function Page({ params }: Props) {
 ### generateMetadata
 
 ```tsx
-type Props = { params: Promise<{ slug: string }> }
+interface Props { params: Promise<{ slug: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params

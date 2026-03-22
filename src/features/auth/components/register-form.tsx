@@ -36,7 +36,7 @@ export default function RegisterForm() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-  
+
     await submit({
       confirmPassword,
       acceptedTerms: acceptTerms,

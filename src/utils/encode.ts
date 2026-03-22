@@ -1,5 +1,5 @@
 import { env } from 'node:process'
-// eslint-disable-next-line e18e/ban-dependencies
+
 import CryptoJS from 'crypto-js'
 
 const ID_ENCRYPTION_KEY = env.NEXT_PUBLIC_ID_ENCRYPTION_KEY || 'default_id_key'

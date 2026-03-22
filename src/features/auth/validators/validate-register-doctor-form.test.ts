@@ -63,7 +63,7 @@ describe('validateRegisterDoctorForm', () => {
 
   it('rejects non-numeric professional license when present', () => {
     expect(validateRegisterDoctorForm({ ...VALID_FORM, professionalLicense: 'AB-123' })).toBe(
-      'La tarjeta profesional debe contener solo números',
+      'La licencia profesional debe contener solo números',
     )
   })
 })
