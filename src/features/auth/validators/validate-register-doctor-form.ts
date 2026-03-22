@@ -38,7 +38,7 @@ export function validateRegisterDoctorForm(
   }
 
   if (formData.professionalLicense && !DIGITS_ONLY_PATTERN.test(formData.professionalLicense)) {
-    return 'La tarjeta profesional debe contener solo números'
+    return 'La licencia profesional debe contener solo números'
   }
 
   if (clientGuards && formData.password !== clientGuards.confirmPassword) {
