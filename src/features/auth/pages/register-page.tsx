@@ -113,6 +113,7 @@ export function RegisterPage() {
                 </p>
                 <button
                   type="button"
+                  onClick={() => window.open('mailto:soporte@saluddeuna.com')}
                   className="mt-6 inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-sm font-semibold backdrop-blur-sm transition-colors hover:bg-white/30"
                 >
                   <Headset className="h-4 w-4" />
