@@ -287,11 +287,11 @@ export default function RegisterForm() {
           <span className="text-sm leading-tight text-slate-600 group-hover:text-slate-700">
             Acepto los
             {' '}
-            <span className="font-semibold text-primary underline decoration-primary/40 underline-offset-2">Términos de Servicio</span>
+            <span className="font-semibold text-primary">Términos de Servicio</span>
             {' '}
             y la
             {' '}
-            <span className="font-semibold text-primary underline decoration-primary/40 underline-offset-2">Política de Privacidad</span>
+            <span className="font-semibold text-primary">Política de Privacidad</span>
             {' '}
             de SaludDeUna. *
           </span>
