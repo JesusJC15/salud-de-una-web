@@ -35,7 +35,7 @@ export function RegisterPage() {
       variants={staggerParent}
     >
       <motion.header
-        className="sticky top-0 z-40 bg-white/80 px-6 py-4 backdrop-blur-xl md:px-14"
+        className="relative sticky top-0 z-40 bg-white/80 px-6 py-4 backdrop-blur-xl md:px-14"
         variants={pageReveal}
       >
         <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-px bg-gradient-to-r from-teal-400/10 via-teal-500/30 to-cyan-500/10" />
