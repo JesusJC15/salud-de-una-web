@@ -4,7 +4,15 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/
 const PASSWORD_PATTERN = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/
 const DIGITS_ONLY_PATTERN = /^\d+$/
 
-export function validateRegisterDoctorForm(formData: RegisterDoctorDto): string | null {
+export interface RegisterFormClientGuardsInput {
+  confirmPassword: string
+  acceptedTerms: boolean
+}
+
+export function validateRegisterDoctorForm(
+  formData: RegisterDoctorDto,
+  clientGuards?: RegisterFormClientGuardsInput,
+): string | null {
   if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
     return 'Completa los campos obligatorios'
   }
@@ -30,7 +38,15 @@ export function validateRegisterDoctorForm(formData: RegisterDoctorDto): string 
   }
 
   if (formData.professionalLicense && !DIGITS_ONLY_PATTERN.test(formData.professionalLicense)) {
-    return 'La tarjeta profesional debe contener solo números'
+    return 'La licencia profesional debe contener solo números'
+  }
+
+  if (clientGuards && formData.password !== clientGuards.confirmPassword) {
+    return 'Las contraseñas no coinciden'
+  }
+
+  if (clientGuards && !clientGuards.acceptedTerms) {
+    return 'Debes aceptar los términos y la política de privacidad para registrarte'
   }
 
   return null

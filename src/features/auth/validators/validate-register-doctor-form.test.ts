@@ -7,6 +7,11 @@ const VALID_TEST_PASSWORD = [
   '1!',
 ].join('')
 const INVALID_TEST_PASSWORD = ['password', '1'].join('')
+const DIFFERENT_TEST_PASSWORD = [
+  'Pass',
+  'word',
+  '2!',
+].join('')
 
 const VALID_FORM = {
   firstName: 'Ana',
@@ -60,5 +65,34 @@ describe('validateRegisterDoctorForm', () => {
     expect(validateRegisterDoctorForm({ ...VALID_FORM, professionalLicense: 'AB-123' })).toBe(
       'La tarjeta profesional debe contener solo números',
     )
+  })
+})
+
+describe('validateRegisterDoctorForm with client guards', () => {
+  it('returns error when password and confirmation do not match', () => {
+    expect(
+      validateRegisterDoctorForm(VALID_FORM, {
+        confirmPassword: DIFFERENT_TEST_PASSWORD,
+        acceptedTerms: true,
+      }),
+    ).toBe('Las contraseñas no coinciden')
+  })
+
+  it('returns error when terms are not accepted', () => {
+    expect(
+      validateRegisterDoctorForm(VALID_FORM, {
+        confirmPassword: VALID_TEST_PASSWORD,
+        acceptedTerms: false,
+      }),
+    ).toBe('Debes aceptar los términos y la política de privacidad para registrarte')
+  })
+
+  it('returns null when passwords match and terms are accepted', () => {
+    expect(
+      validateRegisterDoctorForm(VALID_FORM, {
+        confirmPassword: VALID_TEST_PASSWORD,
+        acceptedTerms: true,
+      }),
+    ).toBeNull()
   })
 })
