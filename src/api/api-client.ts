@@ -217,7 +217,8 @@ async function resolveAccessToken(requiresAuth: boolean) {
     return null
   }
 
-  let accessToken = authService.getAccessToken()
+  // Auth0 SDK handles silent refresh internally — one call is enough.
+  const accessToken = await authService.getAccessToken()
   if (accessToken) {
     return accessToken
   }
@@ -227,15 +228,14 @@ async function resolveAccessToken(requiresAuth: boolean) {
     throw new Error('User not authenticated')
   }
 
+  // Fallback: explicit refresh attempt (handles edge cases like token rotation)
   const refreshed = await authService.refresh()
-  accessToken = refreshed?.accessToken ?? null
-
-  if (!accessToken) {
+  if (!refreshed?.accessToken) {
     await authService.logout()
     throw new Error('Session expired')
   }
 
-  return accessToken
+  return refreshed.accessToken
 }
 
 async function executeRequest<T>(

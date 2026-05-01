@@ -18,6 +18,9 @@ export default antfu(
       '.vscode/**',
     ],
     rules: {
+      // Next.js replaces process.env.NEXT_PUBLIC_* at build time via webpack;
+      // the node/prefer-global/process rule is not applicable here.
+      'node/prefer-global/process': 'off',
       '@tanstack/query/exhaustive-deps': 'error',
       '@tanstack/query/stable-query-client': 'error',
       '@tanstack/query/no-rest-destructuring': 'error',
