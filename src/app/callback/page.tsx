@@ -35,7 +35,6 @@ export default function CallbackPage() {
         const pendingProvision = sessionStorage.getItem('salud-de-una.pending-provision')
 
         if (pendingProvision) {
-          sessionStorage.removeItem('salud-de-una.pending-provision')
           const payload = JSON.parse(pendingProvision) as { role: string, data: unknown }
 
           const endpoint
@@ -54,6 +53,8 @@ export default function CallbackPage() {
               body: JSON.stringify(payload.data),
             },
           )
+
+          sessionStorage.removeItem('salud-de-una.pending-provision')
         }
       }
       catch {
