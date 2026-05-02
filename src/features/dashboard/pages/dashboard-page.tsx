@@ -1,96 +1,101 @@
 'use client'
 
 import { useAuth0 } from '@auth0/auth0-react'
+import { decodeJwt } from 'jose'
 import { motion } from 'motion/react'
-import { cardPopIn, pageReveal, staggerItem, staggerParent } from '@/components/animations/motion-presets'
-import { Button } from '@/components/ui/button'
+import { useEffect, useState } from 'react'
+import { AdminHomePage } from '@/features/admin-home/pages/admin-home-page'
+import { DoctorHomePage } from '@/features/doctor-home/pages/doctor-home-page'
 import { authService } from '@/services/auth-service'
 
-export function DashboardPage() {
-  const { user, isLoading } = useAuth0()
+const NS = 'https://salud-de-una.com/'
 
-  const handleLogout = async () => {
-    await authService.logout()
-  }
+type Role = 'DOCTOR' | 'ADMIN' | 'PATIENT' | null
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
+function LoadingScreen() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[#f5fbfb]">
+      <motion.div
+        className="flex flex-col items-center gap-4"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
         <motion.div
-          className="text-center"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <motion.div
-            className="mx-auto mb-4 h-10 w-10 rounded-full border-4 border-teal-200 border-t-teal-500"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          />
-          <p className="text-slate-500">Cargando...</p>
-        </motion.div>
-      </div>
-    )
-  }
+          className="h-10 w-10 rounded-full border-4 border-teal-100 border-t-teal-500"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+        />
+        <p className="text-sm font-medium text-slate-400">Cargando tu espacio...</p>
+      </motion.div>
+    </div>
+  )
+}
+
+function UnknownRoleFallback({ onLogout }: { onLogout: () => void }) {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#f5fbfb] p-6">
+      <p className="text-center text-sm text-slate-500">
+        Tu cuenta aún no tiene un rol asignado en SaludDeUna.
+        <br />
+        Contacta al administrador para activar tu acceso.
+      </p>
+      <button
+        onClick={onLogout}
+        className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-200"
+      >
+        Cerrar sesión
+      </button>
+    </div>
+  )
+}
+
+export function DashboardPage() {
+  const { isLoading: auth0Loading, getAccessTokenSilently } = useAuth0()
+  const [role, setRole] = useState<Role>(null)
+  const [roleLoading, setRoleLoading] = useState(true)
+
+  useEffect(() => {
+    if (auth0Loading)
+      return
+
+    async function detectRole() {
+      try {
+        const token
+          = (await authService.getAccessToken())
+            ?? (await getAccessTokenSilently())
+
+        if (!token) {
+          setRoleLoading(false)
+          return
+        }
+
+        const claims = decodeJwt(token) as Record<string, unknown>
+        const r = (claims[`${NS}role`] as string | undefined)?.toUpperCase() as Role | undefined
+        setRole(r ?? null)
+      }
+      catch {
+        setRole(null)
+      }
+      finally {
+        setRoleLoading(false)
+      }
+    }
+
+    void detectRole()
+  }, [auth0Loading, getAccessTokenSilently])
+
+  if (auth0Loading || roleLoading)
+    return <LoadingScreen />
+
+  if (role === 'DOCTOR')
+    return <DoctorHomePage />
+  if (role === 'ADMIN')
+    return <AdminHomePage />
 
   return (
-    <motion.div
-      className="gradient-bg min-h-screen p-8 dark:bg-slate-950"
-      initial="hidden"
-      animate="visible"
-      variants={pageReveal}
-    >
-      <div className="mx-auto max-w-4xl">
-        <motion.div
-          className="rounded-xl bg-white p-8 shadow-lg dark:bg-slate-800"
-          variants={staggerParent}
-        >
-          <motion.div className="mb-8 flex items-center justify-between" variants={staggerItem}>
-            <motion.div variants={cardPopIn}>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-                Bienvenido
-              </h1>
-              <p className="mt-2 text-slate-500 dark:text-slate-400">
-                {user?.email}
-              </p>
-            </motion.div>
-
-            <motion.div whileHover={{ y: -1 }} whileTap={{ y: 0 }}>
-              <Button
-                onClick={() => void handleLogout()}
-                className="bg-red-600 text-white hover:bg-red-700"
-              >
-                Cerrar Sesion
-              </Button>
-            </motion.div>
-          </motion.div>
-
-          <motion.div className="space-y-6" variants={staggerParent}>
-            <motion.div className="rounded-lg bg-linear-to-r from-aquamarine to-primary p-6 text-white" variants={cardPopIn}>
-              <h2 className="mb-2 text-2xl font-bold">Portal de Médicos</h2>
-              <p className="opacity-90">
-                Sistema de gestión de atención clínica y comunicación médica
-              </p>
-            </motion.div>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <motion.div className="rounded-lg bg-slate-100 p-6 dark:bg-slate-700" variants={cardPopIn} whileHover={{ y: -3 }}>
-                <h3 className="mb-2 text-lg font-bold text-slate-900 dark:text-slate-100">Pacientes</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Gestiona pacientes y su información médica
-                </p>
-              </motion.div>
-
-              <motion.div className="rounded-lg bg-slate-100 p-6 dark:bg-slate-700" variants={cardPopIn} whileHover={{ y: -3 }}>
-                <h3 className="mb-2 text-lg font-bold text-slate-900 dark:text-slate-100">Reportes</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Accede a reportes y estadísticas
-                </p>
-              </motion.div>
-            </div>
-          </motion.div>
-        </motion.div>
-      </div>
-    </motion.div>
+    <UnknownRoleFallback
+      onLogout={() => void authService.logout()}
+    />
   )
 }

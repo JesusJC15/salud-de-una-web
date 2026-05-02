@@ -1,14 +1,15 @@
 'use client'
 
-import { useCallback, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { apiClient } from '@/api/api-client'
+import type { RegisterFormClientGuardsInput } from '@/features/auth/validators/validate-register-doctor-form'
 import type { RegisterDoctorDto } from '@/types'
+import { useRouter } from 'next/navigation'
+import { useCallback, useState } from 'react'
+import { apiClient } from '@/api/api-client'
 import { INITIAL_REGISTER_DOCTOR_FORM } from '@/features/auth/constants/register-doctor-form'
 import { sanitizeRegisterDoctorField } from '@/features/auth/utils/sanitize-register-doctor-field'
 import {
+
   validateRegisterDoctorForm,
-  type RegisterFormClientGuardsInput,
 } from '@/features/auth/validators/validate-register-doctor-form'
 
 export function useRegisterDoctorLegacy() {

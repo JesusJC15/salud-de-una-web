@@ -12,14 +12,17 @@ let _isAuthenticated = false
 // Legacy JWT session (staff email+password login)
 const SS_ACCESS = 'salud-de-una.legacy.access'
 const SS_REFRESH = 'salud-de-una.legacy.refresh'
+const TRAILING_SLASH = /\/+$/
 
 function ssGet(key: string): string | null {
-  if (typeof window === 'undefined') return null
+  if (typeof window === 'undefined')
+    return null
   return sessionStorage.getItem(key)
 }
 
 function ssSet(key: string, value: string): void {
-  if (typeof window !== 'undefined') sessionStorage.setItem(key, value)
+  if (typeof window !== 'undefined')
+    sessionStorage.setItem(key, value)
 }
 
 function ssClear(): void {
@@ -51,7 +54,8 @@ export const authService = {
     if (_getToken) {
       try {
         const token = await _getToken()
-        if (token) return token
+        if (token)
+          return token
       }
       catch {
         // fall through to legacy
@@ -64,14 +68,16 @@ export const authService = {
   async refresh(): Promise<{ accessToken: string | null } | null> {
     if (_getToken) {
       const token = await this.getAccessToken()
-      if (token) return { accessToken: token }
+      if (token)
+        return { accessToken: token }
     }
 
     const refreshToken = ssGet(SS_REFRESH)
-    if (!refreshToken) return null
+    if (!refreshToken)
+      return null
 
     try {
-      const baseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000').replace(/\/+$/, '')
+      const baseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000').replace(TRAILING_SLASH, '')
       const res = await fetch(`${baseUrl}/v1/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -81,7 +87,7 @@ export const authService = {
         ssClear()
         return null
       }
-      const data = await res.json() as { accessToken: string; refreshToken: string }
+      const data = await res.json() as { accessToken: string, refreshToken: string }
       ssSet(SS_ACCESS, data.accessToken)
       ssSet(SS_REFRESH, data.refreshToken)
       return { accessToken: data.accessToken }
@@ -95,7 +101,8 @@ export const authService = {
   // Returns non-null sentinel when authenticated so api-client can distinguish
   // "not authenticated" from "need to refresh" in resolveAccessToken.
   getRefreshToken(): string | null {
-    if (_isAuthenticated) return '__auth0_managed__'
+    if (_isAuthenticated)
+      return '__auth0_managed__'
     return ssGet(SS_REFRESH)
   },
 
