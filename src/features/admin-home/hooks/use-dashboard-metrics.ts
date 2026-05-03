@@ -48,6 +48,30 @@ export function useBusinessMetrics() {
   })
 }
 
+export interface ConsultationMetrics {
+  generatedAt: string
+  statusBreakdown: { pending: number, inAttention: number, closed: number }
+  totalConsultations: number
+  closedLast7Days: number
+  avgAttentionTimeMinutes: number | null
+  slaCompliance: number | null
+  bySpecialty: { specialty: string, total: number, closed: number }[]
+  topDoctors: { doctorId: string, name: string, specialty?: string, closed: number }[]
+}
+
+export function useConsultationMetrics() {
+  return useQuery<ConsultationMetrics>({
+    queryKey: ['admin', 'consultation-metrics'],
+    queryFn: async () => {
+      const res = await apiClient('').get<ConsultationMetrics>('dashboard/consultations')
+      return res.data
+    },
+    retry: 2,
+    refetchInterval: 60_000,
+    staleTime: 45_000,
+  })
+}
+
 export function useTechnicalMetrics() {
   return useQuery<TechnicalMetrics>({
     queryKey: ['admin', 'technical-metrics'],

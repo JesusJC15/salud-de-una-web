@@ -39,6 +39,24 @@ export interface ChatMessage {
   createdAt?: string
 }
 
+export interface HistoryItem {
+  id: string
+  patientId?: string
+  specialty: string
+  priority: ConsultationPriority
+  status: ConsultationStatus
+  clinicalSummary?: string
+  createdAt: string | null
+  closedAt?: string | null
+}
+
+export interface HistoryResponse {
+  items: HistoryItem[]
+  total: number
+  page: number
+  limit: number
+}
+
 export const consultationService = {
   async getQueue() {
     const res = await apiClient('').get<{ items: QueueItem[] }>('consultations/queue')
@@ -76,6 +94,13 @@ export const consultationService = {
       `consultations/${id}/messages`,
       { params: { limit } },
     )
+    return res.data
+  },
+
+  async getMyHistory(options: { page?: number, limit?: number, status?: string } = {}) {
+    const res = await apiClient('').get<HistoryResponse>('consultations/doctor/my-history', {
+      params: { page: options.page ?? 1, limit: options.limit ?? 20, status: options.status },
+    })
     return res.data
   },
 }

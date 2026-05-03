@@ -7,12 +7,14 @@ import {
   Clock,
   Info,
   ShieldCheck,
+  Stethoscope,
+  Timer,
   TrendingUp,
   Users,
   Zap,
 } from 'lucide-react'
 import Link from 'next/link'
-import { useBusinessMetrics, useTechnicalMetrics } from '@/features/admin-home/hooks/use-dashboard-metrics'
+import { useBusinessMetrics, useConsultationMetrics, useTechnicalMetrics } from '@/features/admin-home/hooks/use-dashboard-metrics'
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -216,9 +218,15 @@ const GROWTH_METRICS: ReadonlyArray<{
   },
 ]
 
+const SPECIALTY_LABELS: Record<string, string> = {
+  GENERAL_MEDICINE: 'Medicina General',
+  ODONTOLOGY: 'Odontología',
+}
+
 export function AdminHomePage() {
   const { data: biz, isLoading: bizLoading, isError: bizError } = useBusinessMetrics()
   const { data: tech, isLoading: techLoading, isError: techError } = useTechnicalMetrics()
+  const { data: consult, isLoading: consultLoading } = useConsultationMetrics()
 
   // Derive alerts from metrics
   const alerts: { level: 'critical' | 'warning' | 'info', message: string }[] = []
@@ -247,6 +255,18 @@ export function AdminHomePage() {
     }
     if (biz.operationalSignals.unreadNotifications > 20) {
       alerts.push({ level: 'info', message: `${biz.operationalSignals.unreadNotifications} notificaciones sin leer acumuladas en el sistema` })
+    }
+  }
+
+  if (consult && !consultLoading) {
+    if (consult.slaCompliance !== null && consult.slaCompliance < 80) {
+      alerts.push({
+        level: consult.slaCompliance < 60 ? 'critical' : 'warning',
+        message: `SLA de atención bajo: ${consult.slaCompliance}% de consultas cerradas en < 2h (umbral 80%)`,
+      })
+    }
+    if (consult.statusBreakdown.pending > 10) {
+      alerts.push({ level: 'warning', message: `${consult.statusBreakdown.pending} consultas pendientes en la cola — considerar agregar médicos` })
     }
   }
 
@@ -444,6 +464,124 @@ export function AdminHomePage() {
             </div>
           </div>
         )}
+
+        {/* ── Consultation Metrics ── */}
+        <section>
+          <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-slate-400">
+            Métricas de Consultas
+          </h2>
+
+          {/* KPIs row */}
+          <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              {
+                icon: Activity,
+                label: 'Total consultas',
+                value: consultLoading ? '—' : fmt(consult?.totalConsultations),
+                sub: consult ? `${consult.statusBreakdown.pending} pendientes · ${consult.statusBreakdown.inAttention} en atención` : '',
+                accent: 'text-teal-600',
+              },
+              {
+                icon: CheckCircle2,
+                label: 'Cerradas (7 días)',
+                value: consultLoading ? '—' : fmt(consult?.closedLast7Days),
+                sub: consult ? `de ${consult.statusBreakdown.closed} totales` : '',
+                accent: 'text-emerald-600',
+              },
+              {
+                icon: Timer,
+                label: 'Tiempo promedio',
+                value: consultLoading ? '—' : consult?.avgAttentionTimeMinutes != null ? `${consult.avgAttentionTimeMinutes} min` : 'N/D',
+                sub: 'desde asignación a cierre',
+                accent: 'text-cyan-600',
+              },
+              {
+                icon: Zap,
+                label: 'Cumplimiento SLA',
+                value: consultLoading ? '—' : consult?.slaCompliance != null ? pct(consult.slaCompliance) : 'N/D',
+                sub: 'cerradas en menos de 2h',
+                accent: consult?.slaCompliance != null && consult.slaCompliance < 80 ? 'text-red-600' : 'text-emerald-600',
+              },
+            ].map(({ icon: Icon, label, value, sub, accent }) => (
+              <div key={label} className="rounded-2xl bg-white p-4 shadow-[0_2px_24px_rgba(20,184,166,0.06)]">
+                <div className="mb-1 flex items-center gap-2">
+                  <Icon className={`h-4 w-4 ${accent}`} />
+                  <span className="text-xs font-semibold text-slate-400">{label}</span>
+                </div>
+                <p className={`text-2xl font-black ${accent}`}>{value}</p>
+                {sub && <p className="mt-1 text-xs text-slate-400">{sub}</p>}
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {/* By specialty */}
+            <div className="rounded-2xl bg-white p-5 shadow-[0_2px_24px_rgba(20,184,166,0.06)]">
+              <div className="mb-4 flex items-center gap-2">
+                <Stethoscope className="h-4 w-4 text-teal-500" />
+                <h3 className="text-sm font-bold text-slate-700">Por especialidad</h3>
+              </div>
+              {consultLoading
+                ? <div className="space-y-2">{[0, 1].map(i => <div key={i} className="h-8 animate-pulse rounded-lg bg-slate-50" />)}</div>
+                : (consult?.bySpecialty ?? []).length === 0
+                  ? <p className="text-xs text-slate-400">Sin datos aún</p>
+                  : (consult?.bySpecialty ?? []).map(row => (
+                    <div key={row.specialty} className="mb-3">
+                      <div className="mb-1 flex items-center justify-between">
+                        <span className="text-xs font-semibold text-slate-600">{SPECIALTY_LABELS[row.specialty] ?? row.specialty}</span>
+                        <span className="text-xs text-slate-400">
+                          {row.closed}
+                          /
+                          {row.total}
+                          {' '}
+                          cerradas
+                        </span>
+                      </div>
+                      <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-teal-400 to-cyan-500"
+                          style={{ width: row.total > 0 ? `${(row.closed / row.total) * 100}%` : '0%' }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+            </div>
+
+            {/* Top doctors */}
+            <div className="rounded-2xl bg-white p-5 shadow-[0_2px_24px_rgba(20,184,166,0.06)]">
+              <div className="mb-4 flex items-center gap-2">
+                <Users className="h-4 w-4 text-teal-500" />
+                <h3 className="text-sm font-bold text-slate-700">Top médicos (casos cerrados)</h3>
+              </div>
+              {consultLoading
+                ? (
+                  <div className="space-y-2">
+                    {[
+                      0,
+                      1,
+                      2,
+                    ].map(i => <div key={i} className="h-8 animate-pulse rounded-lg bg-slate-50" />)}
+                  </div>
+                )
+                : (consult?.topDoctors ?? []).length === 0
+                  ? <p className="text-xs text-slate-400">Sin datos aún</p>
+                  : (consult?.topDoctors ?? []).map((doc, idx) => (
+                    <div key={doc.doctorId} className="flex items-center gap-3 py-2">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-teal-50 text-xs font-black text-teal-600">
+                        {idx + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-800">{doc.name}</p>
+                        {doc.specialty && (
+                          <p className="text-xs text-slate-400">{SPECIALTY_LABELS[doc.specialty] ?? doc.specialty}</p>
+                        )}
+                      </div>
+                      <span className="text-sm font-black text-teal-600">{doc.closed}</span>
+                    </div>
+                  ))}
+            </div>
+          </div>
+        </section>
 
         {/* ── Quick Access ── */}
         <section>

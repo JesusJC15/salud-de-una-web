@@ -2,12 +2,13 @@
 
 import type { ConsultationPriority, QueueItem } from '@/features/doctor-queue/services/consultation-service'
 import { useAuth0 } from '@auth0/auth0-react'
-import { AlertTriangle, Brain, ChevronDown, ChevronRight, Clock, Sparkles, Stethoscope, Timer } from 'lucide-react'
+import { AlertTriangle, Brain, ChevronDown, ChevronRight, Clock, PauseCircle, Sparkles, Stethoscope, Timer } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useAssignConsultation } from '@/features/doctor-queue/hooks/use-assign-consultation'
 import { useConsultationDetail } from '@/features/doctor-queue/hooks/use-consultation-detail'
 import { useConsultationQueue } from '@/features/doctor-queue/hooks/use-consultation-queue'
+import { useDoctorAvailability } from '@/features/doctor-queue/hooks/use-doctor-availability'
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -306,8 +307,14 @@ export function DoctorHomePage() {
   const router = useRouter()
   const { data, isLoading, isError } = useConsultationQueue()
   const assignMutation = useAssignConsultation()
+  const { availability, isUpdating, toggle } = useDoctorAvailability()
+  const [filterSpecialty, setFilterSpecialty] = useState<string>('')
+  const [filterPriority, setFilterPriority] = useState<ConsultationPriority | ''>('')
 
-  const items = data?.items ?? []
+  const allItems = data?.items ?? []
+  const items = allItems.filter(i =>
+    (!filterSpecialty || i.specialty === filterSpecialty)
+    && (!filterPriority || i.priority === filterPriority))
   const high = items.filter(i => i.priority === 'HIGH')
   const moderate = items.filter(i => i.priority === 'MODERATE')
   const low = items.filter(i => i.priority === 'LOW')
@@ -339,15 +346,95 @@ export function DoctorHomePage() {
             </h1>
           </div>
           <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-600">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
-              Disponible
-            </span>
+            <a
+              href="/doctor/history"
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-teal-300 hover:text-teal-600 transition-colors"
+            >
+              Historial
+            </a>
+            <button
+              onClick={toggle}
+              disabled={isUpdating}
+              title={availability === 'AVAILABLE' ? 'Clic para pausar' : 'Clic para reanudar'}
+              className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-colors disabled:opacity-60 ${
+                availability === 'AVAILABLE'
+                  ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                  : 'bg-amber-50 text-amber-600 hover:bg-amber-100'
+              }`}
+            >
+              {availability === 'AVAILABLE'
+                ? (
+                  <>
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+                    Disponible
+                  </>
+                )
+                : (
+                  <>
+                    <PauseCircle className="h-3.5 w-3.5" />
+                    En pausa
+                  </>
+                )}
+            </button>
           </div>
         </div>
       </div>
 
       <div className="mx-auto max-w-4xl space-y-6 px-6 py-6">
+
+        {/* ── Pausa banner ── */}
+        {availability === 'PAUSED' && (
+          <div className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <PauseCircle className="h-5 w-5 shrink-0 text-amber-500" />
+            <p className="text-sm font-medium text-amber-700">
+              Estás en pausa. Los pacientes seguirán en la cola pero no recibirás nuevas asignaciones automáticas.
+            </p>
+            <button onClick={toggle} className="ml-auto text-xs font-bold text-amber-700 underline hover:text-amber-900">
+              Reanudar
+            </button>
+          </div>
+        )}
+
+        {/* ── Filtros ── */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold text-slate-400">Filtrar:</span>
+          {([
+            '',
+            'GENERAL_MEDICINE',
+            'ODONTOLOGY',
+          ] as const).map(sp => (
+            <button
+              key={sp}
+              onClick={() => setFilterSpecialty(sp)}
+              className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+                filterSpecialty === sp
+                  ? 'border-teal-500 bg-teal-500 text-white'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-teal-300'
+              }`}
+            >
+              {sp === '' ? 'Todas las especialidades' : SPECIALTY_LABELS[sp]}
+            </button>
+          ))}
+          <div className="mx-1 h-4 w-px bg-slate-200" />
+          {([
+            '',
+            'HIGH',
+            'MODERATE',
+            'LOW',
+          ] as const).map(pr => (
+            <button
+              key={pr}
+              onClick={() => setFilterPriority(pr)}
+              className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+                filterPriority === pr
+                  ? 'border-teal-500 bg-teal-500 text-white'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-teal-300'
+              }`}
+            >
+              {pr === '' ? 'Toda prioridad' : pr === 'HIGH' ? 'Alta' : pr === 'MODERATE' ? 'Moderada' : 'Baja'}
+            </button>
+          ))}
+        </div>
 
         {/* ── KPI Bar ── */}
         {isLoading
@@ -360,10 +447,10 @@ export function DoctorHomePage() {
           )
           : (
             <KpiBar
-              total={items.length}
-              high={high.length}
-              moderate={moderate.length}
-              low={low.length}
+              total={allItems.length}
+              high={allItems.filter(i => i.priority === 'HIGH').length}
+              moderate={allItems.filter(i => i.priority === 'MODERATE').length}
+              low={allItems.filter(i => i.priority === 'LOW').length}
             />
           )}
 
