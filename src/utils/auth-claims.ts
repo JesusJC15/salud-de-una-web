@@ -11,7 +11,8 @@ const VALID_ROLES: AppRole[] = [
 ]
 
 export function extractRole(claims: Record<string, unknown>): AppRole | null {
-  const raw = claims[`${AUTH0_CLAIMS_NS}role`]
+  // Auth0 tokens use the namespaced claim; legacy HMAC tokens use plain `role`
+  const raw = claims[`${AUTH0_CLAIMS_NS}role`] ?? claims.role
   if (typeof raw !== 'string')
     return null
   const normalized = raw.toUpperCase() as AppRole
@@ -19,7 +20,8 @@ export function extractRole(claims: Record<string, unknown>): AppRole | null {
 }
 
 export function extractDbId(claims: Record<string, unknown>): string | null {
-  const value = claims[`${AUTH0_CLAIMS_NS}db_id`]
+  // Auth0 tokens carry db_id as a custom claim; legacy HMAC tokens use `sub` (MongoDB ObjectId)
+  const value = claims[`${AUTH0_CLAIMS_NS}db_id`] ?? claims.sub
   return typeof value === 'string' && value.length > 0 ? value : null
 }
 
