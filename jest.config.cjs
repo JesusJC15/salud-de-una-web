@@ -46,6 +46,7 @@ module.exports = {
     '!src/features/**/layouts/**',
     '!src/features/**/hooks/**',
     '!src/features/**/constants/**',
+    '!src/providers/**',
   ],
   coverageDirectory: '<rootDir>/coverage',
   coverageReporters: [
