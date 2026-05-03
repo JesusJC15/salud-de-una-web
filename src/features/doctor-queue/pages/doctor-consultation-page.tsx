@@ -12,8 +12,7 @@ import { useCloseConsultation } from '@/features/doctor-queue/hooks/use-close-co
 import { useConsultationDetail } from '@/features/doctor-queue/hooks/use-consultation-detail'
 import { useGenerateSummary } from '@/features/doctor-queue/hooks/use-generate-summary'
 import { authService } from '@/services/auth-service'
-
-const NS = 'https://salud-de-una.com/'
+import { extractDbId } from '@/utils/auth-claims'
 
 interface Props { consultationId: string }
 
@@ -36,7 +35,7 @@ export function DoctorConsultationPage({ consultationId }: Props) {
         if (!token)
           return
         const claims = decodeJwt(token) as Record<string, unknown>
-        const dbId = claims[`${NS}db_id`] as string | undefined
+        const dbId = extractDbId(claims)
         if (dbId)
           setDoctorId(dbId)
       }

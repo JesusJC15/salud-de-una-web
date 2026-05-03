@@ -217,8 +217,8 @@ const GROWTH_METRICS: ReadonlyArray<{
 ]
 
 export function AdminHomePage() {
-  const { data: biz, isLoading: bizLoading } = useBusinessMetrics()
-  const { data: tech, isLoading: techLoading } = useTechnicalMetrics()
+  const { data: biz, isLoading: bizLoading, isError: bizError } = useBusinessMetrics()
+  const { data: tech, isLoading: techLoading, isError: techError } = useTechnicalMetrics()
 
   // Derive alerts from metrics
   const alerts: { level: 'critical' | 'warning' | 'info', message: string }[] = []
@@ -272,6 +272,19 @@ export function AdminHomePage() {
       </div>
 
       <div className="mx-auto max-w-7xl space-y-8 px-6 py-8">
+
+        {/* ── API Error Banner ── */}
+        {(bizError || techError) && (
+          <div className="rounded-2xl border-l-4 border-l-red-500 bg-red-50 px-5 py-4">
+            <p className="text-sm font-bold text-red-700">
+              Error al cargar métricas del sistema.
+              {' '}
+              {bizError && techError ? 'Ambos servicios fallaron.' : bizError ? 'Métricas de negocio no disponibles.' : 'Métricas técnicas no disponibles.'}
+              {' '}
+              Verificá tu sesión o el estado del backend.
+            </p>
+          </div>
+        )}
 
         {/* ── KPIs ── */}
         <section>
@@ -438,10 +451,10 @@ export function AdminHomePage() {
             Acceso Rápido
           </h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <QuickActionBtn href="/admin/users" icon={Users} label="Usuarios" />
-            <QuickActionBtn href="/admin/consultations" icon={Activity} label="Consultas" />
-            <QuickActionBtn href="/admin/metrics" icon={TrendingUp} label="Métricas" />
-            <QuickActionBtn href="/admin/validations" icon={ShieldCheck} label="Validaciones REThUS" />
+            <QuickActionBtn href="/doctor/queue" icon={Activity} label="Cola de consultas" />
+            <QuickActionBtn href="/register" icon={Users} label="Registrar médico" />
+            <QuickActionBtn href="/v1/docs" icon={TrendingUp} label="API Docs" />
+            <QuickActionBtn href="/dashboard" icon={ShieldCheck} label="Inicio" />
           </div>
         </section>
 

@@ -87,9 +87,10 @@ export const authService = {
         ssClear()
         return null
       }
-      const data = await res.json() as { accessToken: string, refreshToken: string }
+      const data = await res.json() as { accessToken: string, refreshToken?: string }
       ssSet(SS_ACCESS, data.accessToken)
-      ssSet(SS_REFRESH, data.refreshToken)
+      // Keep the existing refresh token if the backend doesn't return a new one
+      ssSet(SS_REFRESH, data.refreshToken ?? refreshToken)
       return { accessToken: data.accessToken }
     }
     catch {

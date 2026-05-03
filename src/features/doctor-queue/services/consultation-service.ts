@@ -41,38 +41,38 @@ export interface ChatMessage {
 
 export const consultationService = {
   async getQueue() {
-    const res = await apiClient('v1').get<{ items: QueueItem[] }>('consultations/queue')
+    const res = await apiClient('').get<{ items: QueueItem[] }>('consultations/queue')
     return res.data
   },
 
   async getById(id: string) {
-    const res = await apiClient('v1').get<ConsultationDetail>(`consultations/${id}`)
+    const res = await apiClient('').get<ConsultationDetail>(`consultations/${id}`)
     return res.data
   },
 
   async assign(id: string) {
-    const res = await apiClient('v1').patch<{ id: string, status: string, assignedDoctorId: string, updatedAt: string }>(
+    const res = await apiClient('').patch<{ id: string, status: string, assignedDoctorId: string, updatedAt: string }>(
       `consultations/${id}/assign`,
     )
     return res.data
   },
 
   async generateSummary(id: string) {
-    const res = await apiClient('v1').post<{ consultationId: string, summary: string, generatedAt: string }>(
+    const res = await apiClient('').post<{ consultationId: string, summary: string, generatedAt: string }>(
       `consultations/${id}/summary/generate`,
     )
     return res.data
   },
 
   async close(id: string) {
-    const res = await apiClient('v1').patch<{ id: string, status: string, closedAt: string }>(
+    const res = await apiClient('').patch<{ id: string, status: string, closedAt: string }>(
       `consultations/${id}/close`,
     )
     return res.data
   },
 
   async getMessages(id: string, limit = 50) {
-    const res = await apiClient('v1').get<{ items: ChatMessage[], total: number }>(
+    const res = await apiClient('').get<{ items: ChatMessage[], total: number }>(
       `consultations/${id}/messages`,
       { params: { limit } },
     )

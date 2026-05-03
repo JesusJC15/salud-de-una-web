@@ -39,9 +39,10 @@ export function useBusinessMetrics() {
   return useQuery<BusinessMetrics>({
     queryKey: ['admin', 'business-metrics'],
     queryFn: async () => {
-      const res = await apiClient('v1').get<BusinessMetrics>('dashboard/business')
+      const res = await apiClient('').get<BusinessMetrics>('dashboard/business')
       return res.data
     },
+    retry: 2,
     refetchInterval: 60_000,
     staleTime: 45_000,
   })
@@ -51,9 +52,10 @@ export function useTechnicalMetrics() {
   return useQuery<TechnicalMetrics>({
     queryKey: ['admin', 'technical-metrics'],
     queryFn: async () => {
-      const res = await apiClient('v1').get<TechnicalMetrics>('dashboard/technical')
+      const res = await apiClient('').get<TechnicalMetrics>('dashboard/technical')
       return res.data
     },
+    retry: 2,
     refetchInterval: 30_000,
     staleTime: 20_000,
   })

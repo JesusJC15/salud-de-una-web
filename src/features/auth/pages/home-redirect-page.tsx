@@ -1,5 +1,6 @@
 'use client'
 
+import { useAuth0 } from '@auth0/auth0-react'
 import { HeartPulse } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useRouter } from 'next/navigation'
@@ -8,15 +9,22 @@ import { authService } from '@/services/auth-service'
 
 export function HomeRedirectPage() {
   const router = useRouter()
+  const { isLoading, isAuthenticated } = useAuth0()
 
   useEffect(() => {
-    if (authService.isAuthenticated()) {
+    if (isLoading)
+      return
+    if (isAuthenticated || authService.isAuthenticated()) {
       router.push('/dashboard')
     }
     else {
       router.push('/login')
     }
-  }, [router])
+  }, [
+    router,
+    isLoading,
+    isAuthenticated,
+  ])
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-white px-6">
@@ -33,7 +41,7 @@ export function HomeRedirectPage() {
         >
           <HeartPulse className="h-10 w-10" />
         </motion.div>
-        <p className="text-sm font-medium text-slate-600">Cargando tu sesion...</p>
+        <p className="text-sm font-medium text-slate-600">Cargando tu sesión...</p>
       </motion.div>
     </div>
   )

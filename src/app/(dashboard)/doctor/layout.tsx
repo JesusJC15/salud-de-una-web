@@ -6,8 +6,7 @@ import { decodeJwt } from 'jose'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { authService } from '@/services/auth-service'
-
-const NS = 'https://salud-de-una.com/'
+import { extractRole } from '@/utils/auth-claims'
 
 export default function DoctorLayout({ children }: { children: ReactNode }) {
   const { isLoading, isAuthenticated, getAccessTokenSilently } = useAuth0()
@@ -31,7 +30,7 @@ export default function DoctorLayout({ children }: { children: ReactNode }) {
         }
 
         const claims = decodeJwt(token) as Record<string, unknown>
-        const role = claims[`${NS}role`] as string | undefined
+        const role = extractRole(claims)
 
         if (role !== 'DOCTOR') {
           router.replace('/dashboard')
@@ -39,7 +38,8 @@ export default function DoctorLayout({ children }: { children: ReactNode }) {
         }
         setRoleChecked(true)
       }
-      catch {
+      catch (err) {
+        console.error('[DoctorLayout] Role check failed:', err)
         router.replace('/dashboard')
       }
     }

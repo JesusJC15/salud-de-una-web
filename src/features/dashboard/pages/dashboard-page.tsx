@@ -1,5 +1,6 @@
 'use client'
 
+import type { AppRole } from '@/utils/auth-claims'
 import { useAuth0 } from '@auth0/auth0-react'
 import { decodeJwt } from 'jose'
 import { motion } from 'motion/react'
@@ -7,10 +8,9 @@ import { useEffect, useState } from 'react'
 import { AdminHomePage } from '@/features/admin-home/pages/admin-home-page'
 import { DoctorHomePage } from '@/features/doctor-home/pages/doctor-home-page'
 import { authService } from '@/services/auth-service'
+import { extractRole } from '@/utils/auth-claims'
 
-const NS = 'https://salud-de-una.com/'
-
-type Role = 'DOCTOR' | 'ADMIN' | 'PATIENT' | null
+type Role = AppRole | null
 
 function LoadingScreen() {
   return (
@@ -71,8 +71,7 @@ export function DashboardPage() {
         }
 
         const claims = decodeJwt(token) as Record<string, unknown>
-        const r = (claims[`${NS}role`] as string | undefined)?.toUpperCase() as Role | undefined
-        setRole(r ?? null)
+        setRole(extractRole(claims))
       }
       catch {
         setRole(null)
