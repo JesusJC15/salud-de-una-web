@@ -1,345 +1,114 @@
-import type {
-  AuthMeResponseDto,
-  AuthResponseDto,
-  LoginDto,
-  LogoutResponseDto,
-  RegisterDoctorDto,
-  RegisterDoctorResponseDto,
-} from '@/types'
-import envConfig from '../utils/config/envConfig'
+// Auth0 adapter — replaces the old custom JWT auth-service.
+// api-client.ts calls this; Auth0Provider initializes it via initAuthService().
+// Also supports legacy JWT sessions (staff email+password login during cutover).
 
-type AuthLoginTarget = 'staff'
+type GetTokenFn = () => Promise<string>
+type LogoutFn = (options: { logoutParams: { returnTo: string } }) => void
 
-interface BackendErrorResponse {
-  correlation_id?: string
-  message?: string | string[]
-  path?: string
-  statusCode?: number
-  timestamp?: string
+let _getToken: GetTokenFn | null = null
+let _logout: LogoutFn | null = null
+let _isAuthenticated = false
+
+// Legacy JWT session (staff email+password login)
+const SS_ACCESS = 'salud-de-una.legacy.access'
+const SS_REFRESH = 'salud-de-una.legacy.refresh'
+
+function ssGet(key: string): string | null {
+  if (typeof window === 'undefined') return null
+  return sessionStorage.getItem(key)
 }
 
-interface TimeoutController {
-  cleanup: () => void
-  didTimeout: () => boolean
-  signal?: AbortSignal
+function ssSet(key: string, value: string): void {
+  if (typeof window !== 'undefined') sessionStorage.setItem(key, value)
 }
 
-const JSON_HEADERS = {
-  'Accept': 'application/json',
-  'Content-Type': 'application/json',
-} as const
-
-const CORRELATION_HEADER = 'x-correlation-id'
-const DEFAULT_AUTH_TIMEOUT_MS = 15_000
-
-let accessTokenInMemory: string | null = null
-let refreshRequest: Promise<AuthResponseDto | null> | null = null
-
-function getStoredItem(key: string): string | null {
-  if (typeof window === 'undefined') {
-    return null
-  }
-
-  const value = window.localStorage.getItem(key)
-  return value || null
-}
-
-function setStoredItem(key: string, value: string | null) {
-  if (typeof window === 'undefined') {
-    return
-  }
-
-  if (!value) {
-    window.localStorage.removeItem(key)
-    return
-  }
-
-  window.localStorage.setItem(key, value)
-}
-
-function getErrorMessage(payload: BackendErrorResponse | null, fallback: string) {
-  if (!payload?.message) {
-    return fallback
-  }
-
-  return Array.isArray(payload.message)
-    ? payload.message.join(', ')
-    : payload.message
-}
-
-function createCorrelationId() {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID()
-  }
-
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
-}
-
-function createTimeoutController(
-  timeoutMs: number,
-  externalSignal?: AbortSignal,
-): TimeoutController {
-  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
-    return {
-      cleanup: () => {},
-      didTimeout: () => false,
-      signal: externalSignal,
-    }
-  }
-
-  const controller = new AbortController()
-  let timedOut = false
-
-  const timeoutId = setTimeout(() => {
-    timedOut = true
-    controller.abort()
-  }, timeoutMs)
-
-  const onAbort = () => {
-    controller.abort()
-  }
-
-  if (externalSignal) {
-    if (externalSignal.aborted) {
-      controller.abort()
-    }
-    else {
-      externalSignal.addEventListener('abort', onAbort, { once: true })
-    }
-  }
-
-  return {
-    signal: controller.signal,
-    didTimeout: () => timedOut,
-    cleanup: () => {
-      clearTimeout(timeoutId)
-      if (externalSignal) {
-        externalSignal.removeEventListener('abort', onAbort)
-      }
-    },
+function ssClear(): void {
+  if (typeof window !== 'undefined') {
+    sessionStorage.removeItem(SS_ACCESS)
+    sessionStorage.removeItem(SS_REFRESH)
   }
 }
 
-async function readError(response: Response, fallback: string) {
-  try {
-    const payload = await response.json() as BackendErrorResponse
-    const message = getErrorMessage(payload, fallback)
-    const correlationId = payload.correlation_id || response.headers.get(CORRELATION_HEADER)
-
-    return new Error(correlationId ? `${message} [cid:${correlationId}]` : message)
-  }
-  catch {
-    const correlationId = response.headers.get(CORRELATION_HEADER)
-    return new Error(correlationId ? `${fallback} [cid:${correlationId}]` : fallback)
-  }
-}
-
-async function readJson<T>(response: Response): Promise<T> {
-  const contentType = response.headers.get('content-type') ?? ''
-  if (!contentType.includes('application/json')) {
-    throw new Error('Unexpected response format')
-  }
-
-  return await response.json() as T
-}
-
-async function fetchJson<T>(
-  url: string,
-  options: RequestInit,
-  fallbackError: string,
-): Promise<T> {
-  const headers = new Headers(options.headers)
-
-  if (!headers.has(CORRELATION_HEADER)) {
-    headers.set(CORRELATION_HEADER, createCorrelationId())
-  }
-
-  const timeout = createTimeoutController(DEFAULT_AUTH_TIMEOUT_MS, options.signal ?? undefined)
-
-  let response: Response
-  try {
-    response = await fetch(url, {
-      ...options,
-      headers,
-      signal: timeout.signal,
-    })
-  }
-  catch (error) {
-    timeout.cleanup()
-
-    if (error instanceof Error && error.name === 'AbortError') {
-      if (timeout.didTimeout()) {
-        throw new Error('Request timeout')
-      }
-
-      throw new Error('Request aborted')
-    }
-
-    throw new Error('Network error')
-  }
-  finally {
-    timeout.cleanup()
-  }
-
-  if (!response.ok) {
-    throw await readError(response, fallbackError)
-  }
-
-  return readJson<T>(response)
-}
-
-function persistSession(session: AuthResponseDto | null) {
-  accessTokenInMemory = session?.accessToken ?? null
-  setStoredItem(envConfig.localStorageKeys.refreshToken, session?.refreshToken ?? null)
-  setStoredItem(
-    envConfig.localStorageKeys.user,
-    session?.user ? JSON.stringify(session.user) : null,
-  )
-}
-
-async function requestAuth<T>(
-  endpoint: string,
-  body?: unknown,
-  fallbackError = 'Authentication request failed',
-): Promise<T> {
-  return fetchJson<T>(
-    `${envConfig.apiBaseUrl}${endpoint}`,
-    {
-      method: 'POST',
-      headers: JSON_HEADERS,
-      body: JSON.stringify(body ?? {}),
-    },
-    fallbackError,
-  )
-}
-
-async function performRefresh(): Promise<AuthResponseDto | null> {
-  const refreshToken = getStoredItem(envConfig.localStorageKeys.refreshToken)
-
-  if (!refreshToken) {
-    persistSession(null)
-    return null
-  }
-
-  try {
-    const session = await requestAuth<AuthResponseDto>(
-      '/auth/refresh',
-      { refreshToken },
-      'Session refresh failed',
-    )
-
-    persistSession(session)
-    return session
-  }
-  catch {
-    persistSession(null)
-    return null
-  }
+export function initAuthService(
+  getAccessTokenSilently: GetTokenFn,
+  logout: LogoutFn,
+  isAuthenticated: boolean,
+) {
+  _getToken = getAccessTokenSilently
+  _logout = logout
+  _isAuthenticated = isAuthenticated
 }
 
 export const authService = {
-  getAccessToken(): string | null {
-    return accessTokenInMemory
+  // Initializes a legacy JWT session (staff email+password login).
+  initLegacySession(accessToken: string, refreshToken: string): void {
+    ssSet(SS_ACCESS, accessToken)
+    ssSet(SS_REFRESH, refreshToken)
   },
 
-  getRefreshToken(): string | null {
-    return getStoredItem(envConfig.localStorageKeys.refreshToken)
+  // Returns Auth0 access token, or legacy JWT if not on Auth0.
+  async getAccessToken(): Promise<string | null> {
+    if (_getToken) {
+      try {
+        const token = await _getToken()
+        if (token) return token
+      }
+      catch {
+        // fall through to legacy
+      }
+    }
+    return ssGet(SS_ACCESS)
   },
 
-  getCurrentUser(): AuthResponseDto['user'] | null {
-    const rawUser = getStoredItem(envConfig.localStorageKeys.user)
-
-    if (!rawUser) {
-      return null
+  // Kept for api-client.ts 401 retry logic.
+  async refresh(): Promise<{ accessToken: string | null } | null> {
+    if (_getToken) {
+      const token = await this.getAccessToken()
+      if (token) return { accessToken: token }
     }
 
+    const refreshToken = ssGet(SS_REFRESH)
+    if (!refreshToken) return null
+
     try {
-      return JSON.parse(rawUser) as AuthResponseDto['user']
+      const baseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000').replace(/\/+$/, '')
+      const res = await fetch(`${baseUrl}/v1/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      })
+      if (!res.ok) {
+        ssClear()
+        return null
+      }
+      const data = await res.json() as { accessToken: string; refreshToken: string }
+      ssSet(SS_ACCESS, data.accessToken)
+      ssSet(SS_REFRESH, data.refreshToken)
+      return { accessToken: data.accessToken }
     }
     catch {
-      setStoredItem(envConfig.localStorageKeys.user, null)
+      ssClear()
       return null
     }
   },
 
-  setAccessToken(accessToken: string | null) {
-    accessTokenInMemory = accessToken
-  },
-
-  async login(credentials: LoginDto, target: AuthLoginTarget = 'staff'): Promise<AuthResponseDto> {
-    const session = await requestAuth<AuthResponseDto>(
-      `/auth/${target}/login`,
-      credentials,
-      'Login failed',
-    )
-
-    persistSession(session)
-    return session
-  },
-
-  async loginStaff(credentials: LoginDto): Promise<AuthResponseDto> {
-    return this.login(credentials, 'staff')
-  },
-
-  async registerDoctor(payload: RegisterDoctorDto): Promise<RegisterDoctorResponseDto> {
-    return requestAuth<RegisterDoctorResponseDto>(
-      '/auth/doctor/register',
-      payload,
-      'Doctor registration failed',
-    )
-  },
-
-  async registerStaff(payload: RegisterDoctorDto): Promise<RegisterDoctorResponseDto> {
-    return this.registerDoctor(payload)
-  },
-
-  async refresh(): Promise<AuthResponseDto | null> {
-    refreshRequest ??= performRefresh().finally(() => {
-      refreshRequest = null
-    })
-
-    return refreshRequest
-  },
-
-  async logout(): Promise<LogoutResponseDto> {
-    const refreshToken = this.getRefreshToken()
-
-    try {
-      return await requestAuth<LogoutResponseDto>(
-        '/auth/logout',
-        { refreshToken },
-        'Logout failed',
-      )
-    }
-    finally {
-      persistSession(null)
-    }
-  },
-
-  async me(): Promise<AuthMeResponseDto> {
-    const accessToken = this.getAccessToken() ?? (await this.refresh())?.accessToken
-
-    if (!accessToken) {
-      throw new Error('No active session')
-    }
-
-    return await fetchJson<AuthMeResponseDto>(
-      `${envConfig.apiBaseUrl}/auth/me`,
-      {
-        headers: {
-          ...JSON_HEADERS,
-          Authorization: `Bearer ${accessToken}`,
-        },
-      },
-      'Unable to fetch authenticated user',
-    )
+  // Returns non-null sentinel when authenticated so api-client can distinguish
+  // "not authenticated" from "need to refresh" in resolveAccessToken.
+  getRefreshToken(): string | null {
+    if (_isAuthenticated) return '__auth0_managed__'
+    return ssGet(SS_REFRESH)
   },
 
   isAuthenticated(): boolean {
-    return Boolean(this.getAccessToken() || this.getRefreshToken())
+    return _isAuthenticated || ssGet(SS_ACCESS) !== null
   },
 
-  async getMe(): Promise<AuthMeResponseDto> {
-    return this.me()
+  async logout(): Promise<void> {
+    ssClear()
+    _isAuthenticated = false
+    _getToken = null
+    if (_logout && typeof window !== 'undefined') {
+      _logout({ logoutParams: { returnTo: window.location.origin } })
+    }
   },
 }

@@ -1,15 +1,18 @@
 'use client'
 
+import { useAuth0 } from '@auth0/auth0-react'
 import { ArrowRight, ChevronDown, Eye, EyeOff, Lock, ShieldCheck, Stethoscope } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useRouter } from 'next/navigation'
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { staggerItem, staggerParent } from '@/components/animations/motion-presets'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useRegisterDoctorForm } from '@/features/auth/hooks/use-register-doctor-form'
+import { useRegisterDoctorLegacy } from '@/features/auth/hooks/use-register-doctor-legacy'
 import { Specialty } from '@/types/enums'
 import { SPECIALTY_LABELS } from '@/utils/specialty-labels'
+
+type RegisterMethod = 'email' | 'auth0'
 
 const sectionCardClass = 'relative overflow-hidden rounded-[2rem] bg-white/45 p-6 md:p-8'
 const sectionNumberClass = 'pointer-events-none absolute top-6 right-6 text-6xl font-black text-slate-800/10'
@@ -19,25 +22,41 @@ const inputClass = 'h-12 rounded-xl border-none bg-white text-base text-slate-90
 
 export default function RegisterForm() {
   const router = useRouter()
+  const { loginWithRedirect, isLoading: auth0Redirecting } = useAuth0()
+  const [method, setMethod] = useState<RegisterMethod>('email')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [auth0Error, setAuth0Error] = useState<string | null>(null)
 
-  const handleSuccess = useCallback(() => {
-    router.push('/dashboard')
-  }, [router])
+  const legacyHook = useRegisterDoctorLegacy()
 
-  const { loading, error, formData, clearError, updateField, submit } = useRegisterDoctorForm({
-    onSuccess: handleSuccess,
-  })
+  const active = legacyHook
+
+  const { loading: legacyLoading, error: legacyError, formData, clearError, updateField } = active
+
+  const loading = method === 'email' ? legacyLoading : auth0Redirecting
+  const error = method === 'email' ? legacyError : auth0Error
 
   const specialties = useMemo(() => Object.values(Specialty), [])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
-    await submit({
+    if (method === 'auth0') {
+      setAuth0Error(null)
+      if (!acceptTerms) {
+        setAuth0Error('Debes aceptar los términos y la política de privacidad para registrarte')
+        return
+      }
+      await loginWithRedirect({
+        authorizationParams: { screen_hint: 'signup' },
+      })
+      return
+    }
+
+    await active.submit({
       confirmPassword,
       acceptedTerms: acceptTerms,
     })
@@ -51,223 +70,268 @@ export default function RegisterForm() {
       animate="visible"
       variants={staggerParent}
     >
-      <motion.section className={sectionCardClass} variants={staggerItem}>
-        <span className={sectionNumberClass}>01</span>
-        <div className="mb-8 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-teal-100 text-teal-700">
-            <ShieldCheck className="h-5 w-5" />
-          </div>
-          <h2 className={sectionTitleClass}>Información Personal</h2>
+      <motion.div variants={staggerItem}>
+        <div className="flex overflow-hidden rounded-2xl border border-slate-200 bg-white/60 p-1">
+          <button
+            type="button"
+            onClick={() => setMethod('email')}
+            className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
+              method === 'email'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Email y contraseña
+          </button>
+          <button
+            type="button"
+            onClick={() => setMethod('auth0')}
+            className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
+              method === 'auth0'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Continuar con Auth0
+          </button>
         </div>
+        {method === 'auth0' && (
+          <p className="mt-2 px-1 text-xs text-slate-500">
+            Serás redirigido a Auth0 para crear tu cuenta. La contraseña se configura allí.
+          </p>
+        )}
+      </motion.div>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <label htmlFor="firstName" className="flex flex-col gap-2">
-            <span className={fieldLabelClass}>Nombres *</span>
-            <Input
-              id="firstName"
-              name="firstName"
-              placeholder="Ej: Juan Manuel"
-              value={formData.firstName}
-              onChange={e => updateField('firstName', e.target.value)}
-              required
-              aria-required="true"
-              disabled={loading}
-              className={inputClass}
-            />
-          </label>
-
-          <label htmlFor="lastName" className="flex flex-col gap-2">
-            <span className={fieldLabelClass}>Apellidos *</span>
-            <Input
-              id="lastName"
-              name="lastName"
-              placeholder="Ej: Pérez García"
-              value={formData.lastName}
-              onChange={e => updateField('lastName', e.target.value)}
-              required
-              aria-required="true"
-              disabled={loading}
-              className={inputClass}
-            />
-          </label>
-
-          <label htmlFor="personalId" className="flex flex-col gap-2">
-            <span className={fieldLabelClass}>Documento de Identidad *</span>
-            <Input
-              id="personalId"
-              name="personalId"
-              placeholder="ID / DNI / Pasaporte"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={formData.personalId}
-              onChange={e => updateField('personalId', e.target.value)}
-              required
-              aria-required="true"
-              disabled={loading}
-              className={inputClass}
-            />
-          </label>
-
-          <label htmlFor="phoneNumber" className="flex flex-col gap-2">
-            <span className={fieldLabelClass}>Teléfono *</span>
-            <Input
-              id="phoneNumber"
-              name="phoneNumber"
-              placeholder="Ej: 3001234567"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={formData.phoneNumber}
-              onChange={e => updateField('phoneNumber', e.target.value)}
-              required
-              aria-required="true"
-              disabled={loading}
-              className={inputClass}
-            />
-          </label>
-        </div>
-      </motion.section>
-
-      <motion.section className={sectionCardClass} variants={staggerItem}>
-        <span className={sectionNumberClass}>02</span>
-        <div className="mb-8 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-cyan-100 text-cyan-700">
-            <Stethoscope className="h-5 w-5" />
-          </div>
-          <h2 className={sectionTitleClass}>Credenciales Médicas</h2>
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <label htmlFor="specialty" className="flex flex-col gap-2">
-            <span className={fieldLabelClass}>Especialidad *</span>
-            <div className="relative">
-              <select
-                id="specialty"
-                name="specialty"
-                aria-label="Especialidad"
-                title="Especialidad"
-                value={formData.specialty}
-                onChange={e => updateField('specialty', e.target.value)}
-                required
-                aria-required="true"
-                disabled={loading}
-                className="h-12 w-full appearance-none rounded-xl border-none bg-white px-4 pr-11 text-base text-slate-900 focus-ring"
-              >
-                <option value="" disabled>
-                  Seleccione Especialidad
-                </option>
-                {specialties.map(specialty => (
-                  <option key={specialty} value={specialty}>
-                    {SPECIALTY_LABELS[specialty]}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-5 w-5 -translate-y-1/2 text-slate-400" />
-            </div>
-          </label>
-
-          <label htmlFor="professionalLicense" className="flex flex-col gap-2">
-            <span className={fieldLabelClass}>Licencia Profesional</span>
-            <Input
-              id="professionalLicense"
-              name="professionalLicense"
-              placeholder="Nº Matrícula / Registro"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={formData.professionalLicense ?? ''}
-              onChange={e => updateField('professionalLicense', e.target.value)}
-              disabled={loading}
-              className={inputClass}
-            />
-          </label>
-        </div>
-      </motion.section>
-
-      <motion.section className={sectionCardClass} variants={staggerItem}>
-        <span className={sectionNumberClass}>03</span>
-        <div className="mb-8 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-cyan-100 text-cyan-700">
-            <Lock className="h-5 w-5" />
-          </div>
-          <h2 className={sectionTitleClass}>Acceso a la Cuenta</h2>
-        </div>
-
-        <div className="space-y-6">
-          <label htmlFor="email" className="flex flex-col gap-2">
-            <span className={fieldLabelClass}>Correo Electrónico *</span>
-            <Input
-              id="email"
-              type="email"
-              name="email"
-              placeholder="doctor@hospital.com"
-              value={formData.email}
-              onChange={e => updateField('email', e.target.value)}
-              required
-              aria-required="true"
-              disabled={loading}
-              className={inputClass}
-            />
-          </label>
-
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <label htmlFor="password" className="flex flex-col gap-2">
-              <span className={fieldLabelClass}>Contraseña *</span>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={e => updateField('password', e.target.value)}
-                  required
-                  aria-required="true"
-                  disabled={loading}
-                  className="h-12 rounded-xl border-none bg-white pr-11 text-base text-slate-900 placeholder:text-slate-400 focus-ring"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(prev => !prev)}
-                  disabled={loading}
-                  className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-600"
-                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
+      <AnimatePresence>
+        {method === 'email' && (
+          <motion.div
+            key="form-sections"
+            className="space-y-6"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+          >
+            <motion.section className={sectionCardClass} variants={staggerItem}>
+              <span className={sectionNumberClass}>01</span>
+              <div className="mb-8 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-teal-100 text-teal-700">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+                <h2 className={sectionTitleClass}>Información Personal</h2>
               </div>
-            </label>
 
-            <label htmlFor="confirmPassword" className="flex flex-col gap-2">
-              <span className={fieldLabelClass}>Confirmar Contraseña *</span>
-              <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  name="confirmPassword"
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => {
-                    setConfirmPassword(e.target.value)
-                    clearError()
-                  }}
-                  required
-                  aria-required="true"
-                  disabled={loading}
-                  className="h-12 rounded-xl border-none bg-white pr-11 text-base text-slate-900 placeholder:text-slate-400 focus-ring"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(prev => !prev)}
-                  disabled={loading}
-                  className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-600"
-                  aria-label={showConfirmPassword ? 'Ocultar confirmación de contraseña' : 'Mostrar confirmación de contraseña'}
-                >
-                  {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <label htmlFor="firstName" className="flex flex-col gap-2">
+                  <span className={fieldLabelClass}>Nombres *</span>
+                  <Input
+                    id="firstName"
+                    name="firstName"
+                    placeholder="Ej: Juan Manuel"
+                    value={formData.firstName}
+                    onChange={e => updateField('firstName', e.target.value)}
+                    required
+                    aria-required="true"
+                    disabled={loading}
+                    className={inputClass}
+                  />
+                </label>
+
+                <label htmlFor="lastName" className="flex flex-col gap-2">
+                  <span className={fieldLabelClass}>Apellidos *</span>
+                  <Input
+                    id="lastName"
+                    name="lastName"
+                    placeholder="Ej: Pérez García"
+                    value={formData.lastName}
+                    onChange={e => updateField('lastName', e.target.value)}
+                    required
+                    aria-required="true"
+                    disabled={loading}
+                    className={inputClass}
+                  />
+                </label>
+
+                <label htmlFor="personalId" className="flex flex-col gap-2">
+                  <span className={fieldLabelClass}>Documento de Identidad *</span>
+                  <Input
+                    id="personalId"
+                    name="personalId"
+                    placeholder="ID / DNI / Pasaporte"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={formData.personalId}
+                    onChange={e => updateField('personalId', e.target.value)}
+                    required
+                    aria-required="true"
+                    disabled={loading}
+                    className={inputClass}
+                  />
+                </label>
+
+                <label htmlFor="phoneNumber" className="flex flex-col gap-2">
+                  <span className={fieldLabelClass}>Teléfono *</span>
+                  <Input
+                    id="phoneNumber"
+                    name="phoneNumber"
+                    placeholder="Ej: 3001234567"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={formData.phoneNumber}
+                    onChange={e => updateField('phoneNumber', e.target.value)}
+                    required
+                    aria-required="true"
+                    disabled={loading}
+                    className={inputClass}
+                  />
+                </label>
               </div>
-            </label>
-          </div>
-        </div>
-      </motion.section>
+            </motion.section>
+
+            <motion.section className={sectionCardClass} variants={staggerItem}>
+              <span className={sectionNumberClass}>02</span>
+              <div className="mb-8 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-cyan-100 text-cyan-700">
+                  <Stethoscope className="h-5 w-5" />
+                </div>
+                <h2 className={sectionTitleClass}>Credenciales Médicas</h2>
+              </div>
+
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <label htmlFor="specialty" className="flex flex-col gap-2">
+                  <span className={fieldLabelClass}>Especialidad *</span>
+                  <div className="relative">
+                    <select
+                      id="specialty"
+                      name="specialty"
+                      aria-label="Especialidad"
+                      title="Especialidad"
+                      value={formData.specialty}
+                      onChange={e => updateField('specialty', e.target.value)}
+                      required
+                      aria-required="true"
+                      disabled={loading}
+                      className="h-12 w-full appearance-none rounded-xl border-none bg-white px-4 pr-11 text-base text-slate-900 focus-ring"
+                    >
+                      <option value="" disabled>
+                        Seleccione Especialidad
+                      </option>
+                      {specialties.map(specialty => (
+                        <option key={specialty} value={specialty}>
+                          {SPECIALTY_LABELS[specialty]}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                  </div>
+                </label>
+
+                <label htmlFor="professionalLicense" className="flex flex-col gap-2">
+                  <span className={fieldLabelClass}>Licencia Profesional</span>
+                  <Input
+                    id="professionalLicense"
+                    name="professionalLicense"
+                    placeholder="Nº Matrícula / Registro"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={formData.professionalLicense ?? ''}
+                    onChange={e => updateField('professionalLicense', e.target.value)}
+                    disabled={loading}
+                    className={inputClass}
+                  />
+                </label>
+              </div>
+            </motion.section>
+
+            <motion.section className={sectionCardClass} variants={staggerItem}>
+              <span className={sectionNumberClass}>03</span>
+              <div className="mb-8 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-cyan-100 text-cyan-700">
+                  <Lock className="h-5 w-5" />
+                </div>
+                <h2 className={sectionTitleClass}>Acceso a la Cuenta</h2>
+              </div>
+
+              <div className="space-y-6">
+                <label htmlFor="email" className="flex flex-col gap-2">
+                  <span className={fieldLabelClass}>Correo Electrónico *</span>
+                  <Input
+                    id="email"
+                    type="email"
+                    name="email"
+                    placeholder="doctor@hospital.com"
+                    value={formData.email}
+                    onChange={e => updateField('email', e.target.value)}
+                    required
+                    aria-required="true"
+                    disabled={loading}
+                    className={inputClass}
+                  />
+                </label>
+
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <label htmlFor="password" className="flex flex-col gap-2">
+                    <span className={fieldLabelClass}>Contraseña *</span>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        name="password"
+                        placeholder="••••••••"
+                        value={formData.password}
+                        onChange={e => updateField('password', e.target.value)}
+                        required
+                        aria-required="true"
+                        disabled={loading}
+                        className="h-12 rounded-xl border-none bg-white pr-11 text-base text-slate-900 placeholder:text-slate-400 focus-ring"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(prev => !prev)}
+                        disabled={loading}
+                        className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-600"
+                        aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+                  </label>
+
+                  <label htmlFor="confirmPassword" className="flex flex-col gap-2">
+                    <span className={fieldLabelClass}>Confirmar Contraseña *</span>
+                    <div className="relative">
+                      <Input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        name="confirmPassword"
+                        placeholder="••••••••"
+                        value={confirmPassword}
+                        onChange={(e) => {
+                          setConfirmPassword(e.target.value)
+                          clearError()
+                        }}
+                        required
+                        aria-required="true"
+                        disabled={loading}
+                        className="h-12 rounded-xl border-none bg-white pr-11 text-base text-slate-900 placeholder:text-slate-400 focus-ring"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(prev => !prev)}
+                        disabled={loading}
+                        className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-600"
+                        aria-label={showConfirmPassword ? 'Ocultar confirmación de contraseña' : 'Mostrar confirmación de contraseña'}
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </motion.section>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <motion.div className="space-y-6 py-2" variants={staggerItem}>
         <label htmlFor="acceptTerms" className="group flex cursor-pointer items-start gap-3">
@@ -279,9 +343,8 @@ export default function RegisterForm() {
             onChange={(e) => {
               setAcceptTerms(e.target.checked)
               clearError()
+              setAuth0Error(null)
             }}
-            required
-            aria-required="true"
             disabled={loading}
             className="mt-1 h-5 w-5 cursor-pointer rounded-md border border-slate-300 bg-white text-primary"
           />
@@ -320,7 +383,13 @@ export default function RegisterForm() {
           className="h-14 w-full rounded-full bg-linear-to-r from-aquamarine to-primary text-base font-bold text-white shadow-lg shadow-aquamarine/20 transition-all hover:shadow-aquamarine/30 md:w-auto md:px-12"
           disabled={loading}
         >
-          <span>{loading ? 'Creando cuenta...' : 'Registrarse'}</span>
+          <span>
+            {loading
+              ? 'Creando cuenta...'
+              : method === 'auth0'
+                ? 'Continuar con Auth0'
+                : 'Crear cuenta'}
+          </span>
           {!loading && <ArrowRight className="h-5 w-5" />}
         </Button>
       </motion.div>

@@ -1,74 +1,36 @@
 'use client'
 
-import type { LoginDto } from '@/types'
+import { useAuth0 } from '@auth0/auth0-react'
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
-import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { staggerItem, staggerParent } from '@/components/animations/motion-presets'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { authService } from '@/services/auth-service'
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/
+import { useLoginStaff } from '@/features/auth/hooks/use-login-staff'
 
 export default function LoginForm() {
-  const router = useRouter()
-  const [loading, setLoading] = useState(false)
+  const { loginWithRedirect, isLoading: auth0Loading } = useAuth0()
+  const { login, loading: legacyLoading, error, clearError } = useLoginStaff()
+
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
-  const [formData, setFormData] = useState<LoginDto>({
-    email: '',
-    password: '',
-  })
+  const isLoading = legacyLoading || auth0Loading
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData((prev: LoginDto) => ({
-      ...prev,
-      [name]: value,
-    }))
-    setError(null)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await login(email, password)
   }
 
-  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setError(null)
-    setLoading(true)
-
-    try {
-      // Validaciones básicas
-      if (!formData.email || !formData.password) {
-        setError('Por favor completa todos los campos')
-        setLoading(false)
-        return
-      }
-
-      // Validar email
-      if (!EMAIL_PATTERN.test(formData.email)) {
-        setError('Por favor ingresa un correo válido')
-        setLoading(false)
-        return
-      }
-
-      // Realizar login
-      const response = await authService.loginStaff(formData)
-
-      if (response?.accessToken) {
-        // Redirigir al dashboard
-        router.push('/dashboard')
-      }
-    }
-    catch (err) {
-      const errorMessage
-        = err instanceof Error ? err.message : 'Error al iniciar sesión'
-      setError(errorMessage)
-      console.error('Login error:', err)
-    }
-    finally {
-      setLoading(false)
-    }
+  const handleAuth0 = () => {
+    void loginWithRedirect({
+      authorizationParams: {
+        screen_hint: 'login',
+        ...(email ? { login_hint: email } : {}),
+      },
+    })
   }
 
   return (
@@ -79,106 +41,115 @@ export default function LoginForm() {
       animate="visible"
       variants={staggerParent}
     >
-      {/* Email Field */}
-      <motion.div className="flex flex-col gap-2" variants={staggerItem}>
-        <label htmlFor="email" className="text-slate-700 dark:text-slate-300 text-sm font-semibold ml-1">
-          Email Profesional
-        </label>
-        <div className="relative">
-          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-aquamarine z-10" />
-          <Input
-            id="email"
-            type="email"
-            name="email"
-            placeholder="ejemplo@SaludDeUna.com"
-            value={formData.email}
-            onChange={handleInputChange}
-            disabled={loading}
-            className="pl-12 pr-4 h-14 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus-ring disabled:opacity-50"
-          />
+      <motion.div
+        className="overflow-hidden rounded-2xl border border-slate-100 bg-white p-6 shadow-lg shadow-slate-100/80"
+        variants={staggerItem}
+      >
+        <div className="space-y-4">
+          <label htmlFor="login-email" className="flex flex-col gap-2">
+            <span className="ml-1 text-sm font-semibold text-slate-700">Correo electrónico</span>
+            <div className="relative">
+              <Mail className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-slate-400" />
+              <Input
+                id="login-email"
+                type="email"
+                placeholder="doctor@hospital.com"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  clearError()
+                }}
+                disabled={isLoading}
+                className="h-14 rounded-xl border-slate-200 bg-slate-50 pl-10 text-base placeholder:text-slate-400 focus-ring"
+              />
+            </div>
+          </label>
+
+          <label htmlFor="login-password" className="flex flex-col gap-2">
+            <span className="ml-1 text-sm font-semibold text-slate-700">Contraseña</span>
+            <div className="relative">
+              <Lock className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-slate-400" />
+              <Input
+                id="login-password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value)
+                  clearError()
+                }}
+                disabled={isLoading}
+                className="h-14 rounded-xl border-slate-200 bg-slate-50 pl-10 pr-11 text-base placeholder:text-slate-400 focus-ring"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(prev => !prev)}
+                disabled={isLoading}
+                className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-600"
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
+          </label>
         </div>
       </motion.div>
 
-      {/* Password Field */}
-      <motion.div className="flex flex-col gap-2" variants={staggerItem}>
-        <label htmlFor="password" className="text-slate-700 dark:text-slate-300 text-sm font-semibold ml-1">
-          Contraseña
-        </label>
-        <div className="relative group">
-          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-aquamarine z-10" />
-          <Input
-            id="password"
-            type={showPassword ? 'text' : 'password'}
-            name="password"
-            placeholder="••••••••"
-            value={formData.password}
-            onChange={handleInputChange}
-            disabled={loading}
-            className="pl-12 pr-12 h-14 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus-ring disabled:opacity-50"
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            disabled={loading}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-aquamarine transition-colors disabled:opacity-50"
-          >
-            {showPassword
-              ? (
-                <EyeOff className="w-5 h-5" />
-              )
-              : (
-                <Eye className="w-5 h-5" />
-              )}
-          </button>
-        </div>
-      </motion.div>
-
-      {/* Forgot Password Link */}
-      <motion.div className="flex justify-end" variants={staggerItem}>
-        <a
-          href="/forgot-password"
-          className="text-primary text-sm font-semibold hover:text-aquamarine transition-colors"
-        >
-          ¿Olvidé mi contraseña?
-        </a>
-      </motion.div>
-
-      {/* Error Message */}
       <AnimatePresence mode="wait">
         {error && (
           <motion.div
             key="login-error"
-            className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+            className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.2 }}
           >
-            <p className="text-red-700 dark:text-red-400 text-sm font-medium">
-              {error}
-            </p>
+            {error}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Submit Button */}
-      <motion.div variants={staggerItem} whileHover={{ y: -1 }} whileTap={{ y: 0 }}>
+      <motion.div className="space-y-3" variants={staggerItem}>
         <Button
           type="submit"
-          disabled={loading}
+          disabled={isLoading}
           className="w-full h-14 bg-linear-to-r from-aquamarine to-primary text-white rounded-xl font-bold text-lg shadow-lg shadow-aquamarine/20 hover:shadow-aquamarine/30 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading
+          {legacyLoading
             ? (
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Iniciando sesión...</span>
+                <span>Verificando...</span>
               </div>
             )
             : (
+              <span>Acceder al Panel</span>
+            )}
+        </Button>
+
+        <div className="flex items-center gap-3">
+          <div className="h-px flex-1 bg-slate-200" />
+          <span className="text-xs text-slate-400">o</span>
+          <div className="h-px flex-1 bg-slate-200" />
+        </div>
+
+        <Button
+          type="button"
+          onClick={handleAuth0}
+          disabled={isLoading}
+          variant="outline"
+          className="w-full h-12 rounded-xl border-slate-200 bg-white font-semibold text-slate-700 hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {auth0Loading
+            ? (
               <div className="flex items-center gap-2">
-                <span>Acceder al Panel</span>
+                <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                <span>Cargando...</span>
               </div>
+            )
+            : (
+              <span>Continuar con Auth0</span>
             )}
         </Button>
       </motion.div>

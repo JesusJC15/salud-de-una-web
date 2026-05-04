@@ -1,21 +1,33 @@
 'use client'
 
+import { useAuth0 } from '@auth0/auth0-react'
 import { ShieldPlus, Sparkles, UserPlus } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { cardPopIn, floatingTransition, pageReveal, staggerItem, staggerParent } from '@/components/animations/motion-presets'
 import LoginForm from '@/features/auth/components/login-form'
 import { authService } from '@/services/auth-service'
 
 export function LoginPage() {
   const router = useRouter()
+  const { isAuthenticated, isLoading } = useAuth0()
+  const [hasLegacySession, setHasLegacySession] = useState(false)
 
   useEffect(() => {
-    if (authService.isAuthenticated()) {
+    setHasLegacySession(authService.isAuthenticated())
+  }, [])
+
+  useEffect(() => {
+    if (hasLegacySession || (!isLoading && isAuthenticated)) {
       router.push('/dashboard')
     }
-  }, [router])
+  }, [
+    isLoading,
+    isAuthenticated,
+    hasLegacySession,
+    router,
+  ])
 
   return (
     <motion.div
