@@ -3,25 +3,11 @@
 import { useAuth0 } from '@auth0/auth0-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { authService } from '@/services/auth-service'
 
 type ProvisionState = 'loading' | 'error'
 
-const CLAIM_NS = 'https://salud-de-una.com/'
-const BASE64_PLUS = /-/g
-const BASE64_SLASH = /_/g
 const TRAILING_SLASH = /\/+$/
-
-function decodeJwtPayload(token: string): Record<string, unknown> {
-  try {
-    const part = token.split('.')[1]
-    if (!part)
-      return {}
-    return JSON.parse(atob(part.replace(BASE64_PLUS, '+').replace(BASE64_SLASH, '/'))) as Record<string, unknown>
-  }
-  catch {
-    return {}
-  }
-}
 
 export default function CallbackPage() {
   const { isLoading, isAuthenticated, error, getAccessTokenSilently } = useAuth0()
@@ -50,15 +36,9 @@ export default function CallbackPage() {
         const baseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000').replace(TRAILING_SLASH, '')
 
         const token = await getAccessTokenSilently({ authorizationParams: { audience } })
-        const claims = decodeJwtPayload(token)
-        const dbId = claims[`${CLAIM_NS}db_id`] as string | undefined
-
         const pendingProvision = sessionStorage.getItem('salud-de-una.pending-provision')
 
         if (pendingProvision) {
-          // ── Case 1: new signup — provision with form data saved before redirect ──
-          // Always remove from sessionStorage first — even on failure — so a
-          // subsequent login attempt doesn't replay the same broken provision data.
           sessionStorage.removeItem('salud-de-una.pending-provision')
 
           const payload = JSON.parse(pendingProvision) as { role: string, data: unknown }
@@ -74,28 +54,14 @@ export default function CallbackPage() {
             const body = await res.json().catch(() => ({ message: 'Error desconocido' })) as { message?: string }
             throw new Error(body.message ?? `Error ${res.status} al crear el perfil`)
           }
-
-          // Refresh token so the new db_id claim is included
-          await getAccessTokenSilently({ authorizationParams: { audience }, cacheMode: 'off' })
         }
-        else if (!dbId) {
-          // ── Case 2: existing legacy doctor logging in via Auth0 for the first time ──
-          // The endpoint finds them by email and links their Auth0 account — no body needed.
-          const res = await fetch(`${baseUrl}/v1/auth/provision/doctor`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({}),
-          })
 
-          if (!res.ok) {
-            const body = await res.json().catch(() => ({ message: 'Error desconocido' })) as { message?: string }
-            throw new Error(body.message ?? `Error ${res.status} al vincular la cuenta`)
-          }
-
-          // Refresh token so db_id claim is now present
-          await getAccessTokenSilently({ authorizationParams: { audience }, cacheMode: 'off' })
+        const currentUser = await authService.getCurrentUser(token)
+        if (!currentUser) {
+          throw new Error('No fue posible vincular tu cuenta con un perfil de SaludDeUna')
         }
-        // ── Case 3: returning user with valid db_id — nothing to do ──
+
+        await authService.syncClientSession(token)
 
         router.replace('/dashboard')
       }

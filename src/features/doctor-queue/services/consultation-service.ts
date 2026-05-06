@@ -18,6 +18,11 @@ export interface ConsultationDetail extends QueueItem {
   clinicalSummary?: string
   closedAt?: string
   updatedAt?: string
+  summaryFeedback?: {
+    value: 'USEFUL' | 'PARTIALLY_USEFUL' | 'NOT_USEFUL'
+    comment: string | null
+    createdAt: string
+  } | null
   triage: {
     status: string
     answers: { questionId: string, questionText: string, answerValue: unknown }[]
@@ -57,6 +62,27 @@ export interface HistoryResponse {
   limit: number
 }
 
+export interface TimelineEvent {
+  id: string
+  type:
+    | 'TRIAGE_COMPLETED'
+    | 'CONSULTATION_ASSIGNED'
+    | 'CONSULTATION_CLOSED'
+    | 'FOLLOWUP_CREATED'
+    | 'FOLLOWUP_DUE'
+    | 'FOLLOWUP_COMPLETED'
+    | 'PRIORITY_ESCALATED'
+  occurredAt: string
+  title: string
+  subtitle: string
+  resourceId?: string
+}
+
+export interface TimelineResponse {
+  items: TimelineEvent[]
+  nextCursor: string | null
+}
+
 export const consultationService = {
   async getQueue() {
     const res = await apiClient('').get<{ items: QueueItem[] }>('consultations/queue')
@@ -82,9 +108,16 @@ export const consultationService = {
     return res.data
   },
 
-  async close(id: string) {
+  async close(
+    id: string,
+    input: { baselineSymptomSeverity: number, redFlagsConfirmed: boolean } = {
+      baselineSymptomSeverity: 5,
+      redFlagsConfirmed: false,
+    },
+  ) {
     const res = await apiClient('').patch<{ id: string, status: string, closedAt: string }>(
       `consultations/${id}/close`,
+      input,
     )
     return res.data
   },
@@ -100,6 +133,27 @@ export const consultationService = {
   async getMyHistory(options: { page?: number, limit?: number, status?: string } = {}) {
     const res = await apiClient('').get<HistoryResponse>('consultations/doctor/my-history', {
       params: { page: options.page ?? 1, limit: options.limit ?? 20, status: options.status },
+    })
+    return res.data
+  },
+
+  async submitSummaryFeedback(
+    id: string,
+    input: {
+      value: 'USEFUL' | 'PARTIALLY_USEFUL' | 'NOT_USEFUL'
+      comment?: string
+    },
+  ) {
+    const res = await apiClient('').patch<{ id: string }>(
+      `consultations/${id}/summary/feedback`,
+      input,
+    )
+    return res.data
+  },
+
+  async getPatientTimeline(patientId: string, options: { cursor?: string, limit?: number } = {}) {
+    const res = await apiClient('').get<TimelineResponse>(`patients/${patientId}/timeline`, {
+      params: { cursor: options.cursor, limit: options.limit ?? 20 },
     })
     return res.data
   },

@@ -3,21 +3,34 @@
 import type { ReactNode } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { authService } from '@/services/auth-service'
 
-// Auth guard for /dashboard and all its sub-routes.
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { isLoading, isAuthenticated } = useAuth0()
   const router = useRouter()
+  const [verified, setVerified] = useState(false)
 
   useEffect(() => {
     if (isLoading)
       return
-    // Support both Auth0 sessions and legacy JWT sessions
+
     if (!isAuthenticated && !authService.isAuthenticated()) {
       router.replace('/login')
+      return
     }
+
+    void authService.getCurrentUser().then((user) => {
+      if (!user) {
+        if (isAuthenticated)
+          router.replace('/callback')
+        else
+          router.replace('/login')
+        return
+      }
+
+      setVerified(true)
+    })
   }, [
     isLoading,
     isAuthenticated,
@@ -32,7 +45,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     )
   }
 
-  if (!isAuthenticated && !authService.isAuthenticated())
+  if (!verified)
     return null
 
   return <>{children}</>

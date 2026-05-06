@@ -6,21 +6,22 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { authService } from '@/services/auth-service'
 
-export default function DoctorLayout({ children }: { children: ReactNode }) {
+export default function AdminLayout({ children }: { children: ReactNode }) {
   const { isLoading, isAuthenticated } = useAuth0()
   const router = useRouter()
-  const [roleChecked, setRoleChecked] = useState(false)
+  const [allowed, setAllowed] = useState(false)
 
   useEffect(() => {
     if (isLoading)
       return
-    if (!isAuthenticated && !authService.isAuthenticated()) {
-      router.replace('/login')
-      return
-    }
 
     async function checkRole() {
       try {
+        if (!isAuthenticated && !authService.isAuthenticated()) {
+          router.replace('/login')
+          return
+        }
+
         const user = await authService.getCurrentUser()
         if (!user) {
           if (isAuthenticated)
@@ -30,26 +31,26 @@ export default function DoctorLayout({ children }: { children: ReactNode }) {
           return
         }
 
-        if (user.role !== 'DOCTOR') {
+        if (user.role !== 'ADMIN') {
           router.replace('/dashboard')
           return
         }
-        setRoleChecked(true)
+
+        setAllowed(true)
       }
-      catch (err) {
-        console.error('[DoctorLayout] Role check failed:', err)
+      catch {
         router.replace('/dashboard')
       }
     }
 
     void checkRole()
   }, [
-    isLoading,
     isAuthenticated,
+    isLoading,
     router,
   ])
 
-  if (isLoading || !roleChecked) {
+  if (isLoading || !allowed) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-teal-500 border-t-transparent" />

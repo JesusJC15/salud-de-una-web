@@ -42,7 +42,7 @@ export function useLoginStaff() {
       }
 
       const data = await res.json() as LoginStaffResponse
-      authService.initLegacySession(data.accessToken, data.refreshToken)
+      await authService.initLegacySession(data.accessToken, data.refreshToken)
       router.push('/dashboard')
     }
     catch (err) {

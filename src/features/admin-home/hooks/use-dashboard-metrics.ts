@@ -24,6 +24,16 @@ interface BusinessMetrics {
     unreadNotifications: number
     verificationCoverage: number
   }
+  productKpis: {
+    key: string
+    label: string
+    value: number
+    target: number
+    unit: string
+    formula: string
+    source: string
+    state: 'OK' | 'WARNING' | 'CRITICAL'
+  }[]
 }
 
 interface TechnicalMetrics {
@@ -33,6 +43,15 @@ interface TechnicalMetrics {
   timestamp: string
   source: 'redis' | 'memory'
   degraded: boolean
+}
+
+export interface DashboardAlerts {
+  generatedAt: string
+  items: {
+    key: string
+    level: 'OK' | 'WARNING' | 'CRITICAL'
+    message: string
+  }[]
 }
 
 export function useBusinessMetrics() {
@@ -77,6 +96,19 @@ export function useTechnicalMetrics() {
     queryKey: ['admin', 'technical-metrics'],
     queryFn: async () => {
       const res = await apiClient('').get<TechnicalMetrics>('dashboard/technical')
+      return res.data
+    },
+    retry: 2,
+    refetchInterval: 30_000,
+    staleTime: 20_000,
+  })
+}
+
+export function useDashboardAlerts() {
+  return useQuery<DashboardAlerts>({
+    queryKey: ['admin', 'dashboard-alerts'],
+    queryFn: async () => {
+      const res = await apiClient('').get<DashboardAlerts>('dashboard/alerts')
       return res.data
     },
     retry: 2,

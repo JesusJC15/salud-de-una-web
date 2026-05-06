@@ -14,7 +14,7 @@ import {
   Zap,
 } from 'lucide-react'
 import Link from 'next/link'
-import { useBusinessMetrics, useConsultationMetrics, useTechnicalMetrics } from '@/features/admin-home/hooks/use-dashboard-metrics'
+import { useBusinessMetrics, useConsultationMetrics, useDashboardAlerts, useTechnicalMetrics } from '@/features/admin-home/hooks/use-dashboard-metrics'
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -32,6 +32,36 @@ function pct(value: number): string {
 
 function latency(ms: number): string {
   return ms >= 1_000 ? `${(ms / 1_000).toFixed(2)}s` : `${Math.round(ms)}ms`
+}
+
+const WIDTH_CLASS_BY_STEP: Record<number, string> = {
+  0: 'w-0',
+  5: 'w-[5%]',
+  10: 'w-[10%]',
+  15: 'w-[15%]',
+  20: 'w-[20%]',
+  25: 'w-[25%]',
+  30: 'w-[30%]',
+  35: 'w-[35%]',
+  40: 'w-[40%]',
+  45: 'w-[45%]',
+  50: 'w-[50%]',
+  55: 'w-[55%]',
+  60: 'w-[60%]',
+  65: 'w-[65%]',
+  70: 'w-[70%]',
+  75: 'w-[75%]',
+  80: 'w-[80%]',
+  85: 'w-[85%]',
+  90: 'w-[90%]',
+  95: 'w-[95%]',
+  100: 'w-[100%]',
+}
+
+function widthClassFromPercent(value: number): string {
+  const clamped = Math.max(0, Math.min(100, value))
+  const roundedToStep = Math.round(clamped / 5) * 5
+  return WIDTH_CLASS_BY_STEP[roundedToStep] ?? 'w-0'
 }
 
 // ─── sub-components ────────────────────────────────────────────────────────
@@ -178,8 +208,7 @@ function DoctorStatusSummary({
 
       <div className="h-2 overflow-hidden rounded-full bg-slate-100">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-teal-400 to-teal-500 transition-all duration-700"
-          style={{ width: `${verifiedPct}%` }}
+          className={`h-full rounded-full bg-gradient-to-r from-teal-400 to-teal-500 transition-all duration-700 ${widthClassFromPercent(verifiedPct)}`}
         />
       </div>
 
@@ -227,6 +256,7 @@ export function AdminHomePage() {
   const { data: biz, isLoading: bizLoading, isError: bizError } = useBusinessMetrics()
   const { data: tech, isLoading: techLoading, isError: techError } = useTechnicalMetrics()
   const { data: consult, isLoading: consultLoading } = useConsultationMetrics()
+  const { data: alertsData } = useDashboardAlerts()
 
   // Derive alerts from metrics
   const alerts: { level: 'critical' | 'warning' | 'info', message: string }[] = []
@@ -274,6 +304,8 @@ export function AdminHomePage() {
     alerts.push({ level: 'info', message: 'Sin alertas activas — sistema operando normalmente' })
   }
 
+  const apiAlerts = alertsData?.items ?? []
+
   return (
     <div className="min-h-screen bg-[#f5fbfb]">
       {/* ── Header ── */}
@@ -305,6 +337,54 @@ export function AdminHomePage() {
             </p>
           </div>
         )}
+
+        {biz?.productKpis?.length
+          ? (
+            <section>
+              <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-slate-400">
+                KPIs de Producto
+              </h2>
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {biz.productKpis.map(kpi => (
+                  <div key={kpi.key} className="rounded-2xl bg-white p-5 shadow-[0_2px_24px_rgba(20,184,166,0.06)]">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-bold text-slate-800">{kpi.label}</p>
+                        <p className="mt-1 text-xs text-slate-400">{kpi.formula}</p>
+                      </div>
+                      <span className={`rounded-full px-2.5 py-1 text-[11px] font-black ${
+                        kpi.state === 'OK'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : kpi.state === 'WARNING'
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-red-100 text-red-700'
+                      }`}
+                      >
+                        {kpi.state}
+                      </span>
+                    </div>
+                    <div className="mt-4 flex items-end justify-between">
+                      <p className="text-3xl font-black text-slate-900">
+                        {kpi.value}
+                        {kpi.unit}
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        Meta:
+                        {' '}
+                        {kpi.target}
+                        {kpi.unit}
+                      </p>
+                    </div>
+                    <p className="mt-2 text-xs text-slate-500">
+                      Fuente:
+                      {kpi.source}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )
+          : null}
 
         {/* ── KPIs ── */}
         <section>
@@ -396,7 +476,18 @@ export function AdminHomePage() {
                   ? Array.from({ length: 3 }).map((_, i) => (
                     <div key={i} className="h-12 animate-pulse rounded-xl bg-slate-50" />
                   ))
-                  : alerts.map((a, i) => (
+                  : [
+                    ...alerts,
+                    ...apiAlerts
+                      .filter(alert => alert.level !== 'OK')
+                      .map(alert => ({
+                        level:
+                            alert.level === 'CRITICAL'
+                              ? 'critical' as const
+                              : 'warning' as const,
+                        message: alert.message,
+                      })),
+                  ].map((a, i) => (
                     <AlertRow key={i} level={a.level} message={a.message} />
                   ))}
               </div>
@@ -454,8 +545,7 @@ export function AdminHomePage() {
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                       <div
-                        className={`h-full rounded-full bg-gradient-to-r ${metric.colorClass} transition-all duration-1000`}
-                        style={{ width: `${widthPct}%` }}
+                        className={`h-full rounded-full bg-gradient-to-r ${metric.colorClass} transition-all duration-1000 ${widthClassFromPercent(widthPct)}`}
                       />
                     </div>
                   </div>
@@ -525,26 +615,29 @@ export function AdminHomePage() {
                 ? <div className="space-y-2">{[0, 1].map(i => <div key={i} className="h-8 animate-pulse rounded-lg bg-slate-50" />)}</div>
                 : (consult?.bySpecialty ?? []).length === 0
                   ? <p className="text-xs text-slate-400">Sin datos aún</p>
-                  : (consult?.bySpecialty ?? []).map(row => (
-                    <div key={row.specialty} className="mb-3">
-                      <div className="mb-1 flex items-center justify-between">
-                        <span className="text-xs font-semibold text-slate-600">{SPECIALTY_LABELS[row.specialty] ?? row.specialty}</span>
-                        <span className="text-xs text-slate-400">
-                          {row.closed}
-                          /
-                          {row.total}
-                          {' '}
-                          cerradas
-                        </span>
+                  : (consult?.bySpecialty ?? []).map((row) => {
+                    const closedPct = row.total > 0 ? (row.closed / row.total) * 100 : 0
+
+                    return (
+                      <div key={row.specialty} className="mb-3">
+                        <div className="mb-1 flex items-center justify-between">
+                          <span className="text-xs font-semibold text-slate-600">{SPECIALTY_LABELS[row.specialty] ?? row.specialty}</span>
+                          <span className="text-xs text-slate-400">
+                            {row.closed}
+                            /
+                            {row.total}
+                            {' '}
+                            cerradas
+                          </span>
+                        </div>
+                        <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                          <div
+                            className={`h-full rounded-full bg-gradient-to-r from-teal-400 to-cyan-500 ${widthClassFromPercent(closedPct)}`}
+                          />
+                        </div>
                       </div>
-                      <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-teal-400 to-cyan-500"
-                          style={{ width: row.total > 0 ? `${(row.closed / row.total) * 100}%` : '0%' }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
             </div>
 
             {/* Top doctors */}
@@ -590,9 +683,9 @@ export function AdminHomePage() {
           </h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <QuickActionBtn href="/doctor/queue" icon={Activity} label="Cola de consultas" />
-            <QuickActionBtn href="/register" icon={Users} label="Registrar médico" />
+            <QuickActionBtn href="/admin/doctors" icon={Users} label="Doctores" />
             <QuickActionBtn href="/v1/docs" icon={TrendingUp} label="API Docs" />
-            <QuickActionBtn href="/dashboard" icon={ShieldCheck} label="Inicio" />
+            <QuickActionBtn href="/admin/users" icon={ShieldCheck} label="Usuarios" />
           </div>
         </section>
 

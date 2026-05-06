@@ -2,13 +2,11 @@
 
 import type { AppRole } from '@/utils/auth-claims'
 import { useAuth0 } from '@auth0/auth0-react'
-import { decodeJwt } from 'jose'
 import { motion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import { AdminHomePage } from '@/features/admin-home/pages/admin-home-page'
 import { DoctorHomePage } from '@/features/doctor-home/pages/doctor-home-page'
 import { authService } from '@/services/auth-service'
-import { extractRole } from '@/utils/auth-claims'
 
 type Role = AppRole | null
 
@@ -51,7 +49,7 @@ function UnknownRoleFallback({ onLogout }: { onLogout: () => void }) {
 }
 
 export function DashboardPage() {
-  const { isLoading: auth0Loading, getAccessTokenSilently } = useAuth0()
+  const { isLoading: auth0Loading } = useAuth0()
   const [role, setRole] = useState<Role>(null)
   const [roleLoading, setRoleLoading] = useState(true)
 
@@ -61,17 +59,13 @@ export function DashboardPage() {
 
     async function detectRole() {
       try {
-        const token
-          = (await authService.getAccessToken())
-            ?? (await getAccessTokenSilently())
-
-        if (!token) {
+        const user = await authService.getCurrentUser()
+        if (!user) {
           setRoleLoading(false)
           return
         }
 
-        const claims = decodeJwt(token) as Record<string, unknown>
-        setRole(extractRole(claims))
+        setRole(user.role as Role)
       }
       catch {
         setRole(null)
@@ -82,7 +76,7 @@ export function DashboardPage() {
     }
 
     void detectRole()
-  }, [auth0Loading, getAccessTokenSilently])
+  }, [auth0Loading])
 
   if (auth0Loading || roleLoading)
     return <LoadingScreen />
