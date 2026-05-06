@@ -1,29 +1,30 @@
 'use client'
 
-import { useAuth0 } from '@auth0/auth0-react'
-import { decodeJwt } from 'jose'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { ChatPanel } from '@/features/doctor-queue/components/chat-panel'
 import { ClinicalSummaryPanel } from '@/features/doctor-queue/components/clinical-summary-panel'
+import { PatientTimelinePanel } from '@/features/doctor-queue/components/patient-timeline-panel'
 import { PriorityBadge } from '@/features/doctor-queue/components/priority-badge'
 import { useChatSocket } from '@/features/doctor-queue/hooks/use-chat-socket'
 import { useCloseConsultation } from '@/features/doctor-queue/hooks/use-close-consultation'
 import { useConsultationDetail } from '@/features/doctor-queue/hooks/use-consultation-detail'
 import { useGenerateSummary } from '@/features/doctor-queue/hooks/use-generate-summary'
+import { useSummaryFeedback } from '@/features/doctor-queue/hooks/use-summary-feedback'
 import { authService } from '@/services/auth-service'
-import { extractDbId } from '@/utils/auth-claims'
 
 interface Props { consultationId: string }
 
 export function DoctorConsultationPage({ consultationId }: Props) {
   const router = useRouter()
-  const { getAccessTokenSilently } = useAuth0()
   const [doctorId, setDoctorId] = useState<string | null>(null)
+  const [baselineSymptomSeverity, setBaselineSymptomSeverity] = useState(5)
+  const [redFlagsConfirmed, setRedFlagsConfirmed] = useState(false)
 
   const { data: consultation, isLoading } = useConsultationDetail(consultationId)
   const generateSummaryMutation = useGenerateSummary(consultationId)
   const closeConsultationMutation = useCloseConsultation(consultationId)
+  const summaryFeedbackMutation = useSummaryFeedback(consultationId)
   const { messages, status: socketStatus, sendMessage } = useChatSocket(
     consultation?.status === 'IN_ATTENTION' ? consultationId : null,
   )
@@ -31,21 +32,21 @@ export function DoctorConsultationPage({ consultationId }: Props) {
   useEffect(() => {
     async function extractDoctorId() {
       try {
-        const token = await authService.getAccessToken() ?? await getAccessTokenSilently()
-        if (!token)
+        const user = await authService.getCurrentUser()
+        if (!user)
           return
-        const claims = decodeJwt(token) as Record<string, unknown>
-        const dbId = extractDbId(claims)
-        if (dbId)
-          setDoctorId(dbId)
+        setDoctorId(user.id)
       }
       catch {}
     }
     void extractDoctorId()
-  }, [getAccessTokenSilently])
+  }, [])
 
   const handleClose = async () => {
-    await closeConsultationMutation.mutateAsync()
+    await closeConsultationMutation.mutateAsync({
+      baselineSymptomSeverity,
+      redFlagsConfirmed,
+    })
     router.push('/doctor/queue')
   }
 
@@ -94,21 +95,63 @@ export function DoctorConsultationPage({ consultationId }: Props) {
         )}
       </div>
 
-      <div className="grid h-[calc(100vh-180px)] grid-cols-1 gap-4 lg:grid-cols-2">
-        <ChatPanel
-          messages={messages}
-          status={socketStatus}
-          onSend={sendMessage}
-          currentUserId={doctorId ?? ''}
-          disabled={isClosed}
-        />
-        <ClinicalSummaryPanel
-          summary={consultation.clinicalSummary}
-          isGenerating={generateSummaryMutation.isPending}
-          onGenerate={() => void generateSummaryMutation.mutateAsync()}
-          disabled={isClosed}
-          triage={consultation.triage}
-        />
+      {!isClosed && consultation.status === 'IN_ATTENTION' && (
+        <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+          <div className="grid gap-4 lg:grid-cols-[180px_1fr]">
+            <div>
+              <label htmlFor="baseline-symptom-severity" className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Severidad base
+              </label>
+              <input
+                id="baseline-symptom-severity"
+                type="range"
+                min={1}
+                max={10}
+                value={baselineSymptomSeverity}
+                onChange={event => setBaselineSymptomSeverity(Number(event.target.value))}
+                className="mt-2 w-full accent-teal-500"
+              />
+              <p className="mt-1 text-sm font-semibold text-slate-700">
+                {baselineSymptomSeverity}
+                /10
+              </p>
+            </div>
+            <label className="flex items-start gap-3 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                checked={redFlagsConfirmed}
+                onChange={event => setRedFlagsConfirmed(event.target.checked)}
+                className="mt-0.5"
+              />
+              Confirmo que las señales de alarma del triage resultaron clínicamente relevantes al cierre.
+            </label>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="grid h-[calc(100vh-180px)] grid-cols-1 gap-4 lg:grid-cols-2">
+          <ChatPanel
+            messages={messages}
+            status={socketStatus}
+            onSend={sendMessage}
+            currentUserId={doctorId ?? ''}
+            disabled={isClosed}
+          />
+          <ClinicalSummaryPanel
+            consultationId={consultationId}
+            summary={consultation.clinicalSummary}
+            isGenerating={generateSummaryMutation.isPending}
+            onGenerate={() => void generateSummaryMutation.mutateAsync()}
+            onFeedback={input => void summaryFeedbackMutation.mutateAsync(input)}
+            feedbackValue={consultation.summaryFeedback?.value ?? null}
+            disabled={isClosed}
+            triage={consultation.triage}
+          />
+        </div>
+        <div>
+          <PatientTimelinePanel patientId={consultation.patientId} />
+        </div>
       </div>
     </div>
   )
