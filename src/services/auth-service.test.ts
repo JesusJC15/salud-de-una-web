@@ -78,6 +78,10 @@ describe('authService (Auth0 adapter)', () => {
     })
 
     it('logout calls Auth0 logout with returnTo and clears state', async () => {
+      Object.defineProperty(globalThis, 'sessionStorage', {
+        configurable: true,
+        value: { removeItem: jest.fn(), getItem: jest.fn(() => null), setItem: jest.fn() },
+      })
       Object.defineProperty(globalThis, 'window', {
         configurable: true,
         value: { location: { origin: 'https://staff.salud-de-una.com' } },

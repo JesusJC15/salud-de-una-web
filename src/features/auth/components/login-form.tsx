@@ -27,6 +27,7 @@ export default function LoginForm() {
   const handleAuth0 = () => {
     void loginWithRedirect({
       authorizationParams: {
+        audience: process.env.NEXT_PUBLIC_AUTH0_AUDIENCE,
         screen_hint: 'login',
         ...(email ? { login_hint: email } : {}),
       },

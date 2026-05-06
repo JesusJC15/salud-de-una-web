@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 
 export function AuthLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="gradient-bg dark:bg-background-dark relative flex min-h-screen flex-col overflow-x-hidden">
+    <div className="gradient-bg dark:bg-background-dark relative flex min-h-screen flex-col">
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
         <div className="absolute -top-24 -left-24 h-80 w-80 rounded-full bg-aquamarine/10 blur-3xl"></div>
         <div className="absolute top-1/2 -right-32 h-96 w-96 rounded-full bg-primary/10 blur-3xl"></div>

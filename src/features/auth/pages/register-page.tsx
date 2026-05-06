@@ -1,5 +1,6 @@
 'use client'
 
+import { useAuth0 } from '@auth0/auth0-react'
 import { BarChart3, BriefcaseMedical, CircleCheck, Headset, ShieldCheck } from 'lucide-react'
 import { motion } from 'motion/react'
 import Image from 'next/image'
@@ -20,12 +21,19 @@ const BENEFIT_ICONS = [
 
 export function RegisterPage() {
   const router = useRouter()
+  const { isAuthenticated, isLoading } = useAuth0()
 
   useEffect(() => {
-    if (authService.isAuthenticated()) {
+    if (isLoading)
+      return
+    if (isAuthenticated || authService.isAuthenticated()) {
       router.push('/dashboard')
     }
-  }, [router])
+  }, [
+    isLoading,
+    isAuthenticated,
+    router,
+  ])
 
   return (
     <motion.div
