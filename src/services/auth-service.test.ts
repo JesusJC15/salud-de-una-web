@@ -112,6 +112,16 @@ describe('authService (Auth0 adapter)', () => {
     expect(sessionStorage.setItem).toHaveBeenCalledWith('salud-de-una.legacy.refresh', 'legacy-refresh')
   })
 
+  it('returns null when there is no legacy refresh token to exchange', async () => {
+    mockBrowserSessionStorage()
+    globalThis.fetch = jest.fn() as typeof fetch
+
+    const { authService } = await importFreshAuthService()
+
+    await expect(authService.refresh()).resolves.toBeNull()
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+  })
+
   it('clears the legacy session when refresh fails or the backend rejects it', async () => {
     const sessionStorage = mockBrowserSessionStorage({
       'salud-de-una.legacy.refresh': 'legacy-refresh',
