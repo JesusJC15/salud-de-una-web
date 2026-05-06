@@ -29,6 +29,7 @@ describe('apiClient', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    jest.useRealTimers()
 
     getAccessToken.mockReturnValue('access-token')
     getRefreshToken.mockReturnValue('refresh-token')
@@ -112,6 +113,51 @@ describe('apiClient', () => {
     expect(headers.get('Content-Type')).toBe('application/json')
   })
 
+  it('reuses caller-provided headers and correlation ids', async () => {
+    ;(globalThis.fetch as jest.Mock).mockResolvedValue(createJsonResponse({ ok: true }))
+
+    const { apiClient } = await import('@/api/api-client')
+    const client = apiClient('auth')
+
+    await client.request({
+      endpoint: '/login',
+      method: 'POST',
+      data: { email: 'ana@saluddeuna.com' },
+      correlationId: 'client-cid',
+      headers: {
+        Accept: 'text/plain',
+        'x-correlation-id': 'header-cid',
+      },
+      requiresAuth: false,
+    })
+
+    const [, request] = (globalThis.fetch as jest.Mock).mock.calls[0]
+    const headers = request.headers as Headers
+    expect(headers.get('Accept')).toBe('text/plain')
+    expect(headers.get('x-correlation-id')).toBe('header-cid')
+  })
+
+  it('falls back to a generated correlation id when crypto.randomUUID is unavailable', async () => {
+    ;(globalThis.fetch as jest.Mock).mockResolvedValue(createJsonResponse({ ok: true }))
+
+    Object.defineProperty(globalThis, 'crypto', {
+      configurable: true,
+      value: {},
+    })
+
+    const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(123456789)
+    const mathRandomSpy = jest.spyOn(Math, 'random').mockReturnValue(0.123456789)
+
+    const { apiClient } = await import('@/api/api-client')
+    await apiClient('auth').get('status', false)
+
+    const headers = (globalThis.fetch as jest.Mock).mock.calls[0][1].headers as Headers
+    expect(headers.get('x-correlation-id')).toBe('123456789-4fzzzxjyl')
+
+    dateNowSpy.mockRestore()
+    mathRandomSpy.mockRestore()
+  })
+
   it('returns undefined for 204 responses', async () => {
     ;(globalThis.fetch as jest.Mock).mockResolvedValue(new Response(null, { status: 204 }))
 
@@ -133,6 +179,26 @@ describe('apiClient', () => {
     expect(response.data).toBe('pong')
   })
 
+  it('passes through non-json request bodies for write helpers', async () => {
+    ;(globalThis.fetch as jest.Mock)
+      .mockResolvedValueOnce(createJsonResponse({ ok: true }))
+      .mockResolvedValueOnce(createJsonResponse({ ok: true }))
+
+    const { apiClient } = await import('@/api/api-client')
+    const client = apiClient('profile')
+    const formData = new FormData()
+    formData.set('avatar', 'binary-data')
+
+    await client.put('avatar', formData)
+    await client.patch('preferences', new URLSearchParams({ theme: 'light' }))
+
+    const firstHeaders = (globalThis.fetch as jest.Mock).mock.calls[0][1].headers as Headers
+    const secondRequest = (globalThis.fetch as jest.Mock).mock.calls[1][1]
+    expect((globalThis.fetch as jest.Mock).mock.calls[0][1].body).toBe(formData)
+    expect(firstHeaders.get('Content-Type')).toBeNull()
+    expect(secondRequest.body).toBeInstanceOf(URLSearchParams)
+  })
+
   it('retries once after a 401 when refresh succeeds', async () => {
     ;(globalThis.fetch as jest.Mock)
       .mockResolvedValueOnce(createJsonResponse({ message: 'expired' }, { status: 401 }))
@@ -152,6 +218,18 @@ describe('apiClient', () => {
     ;(globalThis.fetch as jest.Mock).mockResolvedValueOnce(
       createJsonResponse({ message: 'expired' }, { status: 401 }),
     )
+
+    const { apiClient } = await import('@/api/api-client')
+    const client = apiClient('profile')
+
+    await expect(client.get('me')).rejects.toThrow('Session expired')
+    expect(logout).toHaveBeenCalledTimes(1)
+  })
+
+  it('throws session expired when auth refresh cannot recover the initial token', async () => {
+    getAccessToken.mockReturnValueOnce(null)
+    getRefreshToken.mockReturnValueOnce('refresh-token')
+    refresh.mockResolvedValueOnce({ accessToken: null })
 
     const { apiClient } = await import('@/api/api-client')
     const client = apiClient('profile')
@@ -204,6 +282,26 @@ describe('apiClient', () => {
     }
   })
 
+  it('falls back to a generic error when the backend payload cannot be parsed', async () => {
+    ;(globalThis.fetch as jest.Mock).mockResolvedValue(new Response('<html>oops</html>', {
+      status: 500,
+      headers: {
+        'content-type': 'text/html',
+        'x-correlation-id': 'fallback-cid',
+      },
+    }))
+
+    const { ApiClientError, apiClient } = await import('@/api/api-client')
+    const client = apiClient('profile')
+
+    await expect(client.get('me')).rejects.toBeInstanceOf(ApiClientError)
+    await expect(client.get('me')).rejects.toMatchObject({
+      message: 'Request failed with status 500',
+      correlationId: 'fallback-cid',
+      status: 500,
+    })
+  })
+
   it('surfaces network failures as ApiClientError', async () => {
     ;(globalThis.fetch as jest.Mock).mockRejectedValue(new Error('socket hang up'))
 
@@ -217,5 +315,114 @@ describe('apiClient', () => {
       message: 'Network error',
       correlationId: 'api-correlation-id',
     })
+  })
+
+  it('reports request timeout when the internal timeout aborts the fetch', async () => {
+    jest.useFakeTimers()
+    ;(globalThis.fetch as jest.Mock).mockImplementation((_url: string, init?: RequestInit) => {
+      return new Promise((_, reject) => {
+        if (init?.signal?.aborted) {
+          const abortError = new Error('Timed out')
+          abortError.name = 'AbortError'
+          reject(abortError)
+          return
+        }
+        init?.signal?.addEventListener('abort', () => {
+          const abortError = new Error('Timed out')
+          abortError.name = 'AbortError'
+          reject(abortError)
+        }, { once: true })
+      })
+    })
+
+    const { ApiClientError, apiClient } = await import('@/api/api-client')
+    const request = apiClient('profile').get('me', { timeoutMs: 5 }).catch(error => error)
+    await jest.advanceTimersByTimeAsync(5)
+
+    const error = await request
+    expect(error).toBeInstanceOf(ApiClientError)
+    expect(error).toMatchObject({
+      message: 'Request timeout',
+      status: 408,
+    })
+  })
+
+  it('reports request aborted when the caller aborts the signal', async () => {
+    ;(globalThis.fetch as jest.Mock).mockImplementation((_url: string, init?: RequestInit) => {
+      return new Promise((_, reject) => {
+        if (init?.signal?.aborted) {
+          const abortError = new Error('Aborted')
+          abortError.name = 'AbortError'
+          reject(abortError)
+          return
+        }
+        init?.signal?.addEventListener('abort', () => {
+          const abortError = new Error('Aborted')
+          abortError.name = 'AbortError'
+          reject(abortError)
+        }, { once: true })
+      })
+    })
+
+    const { ApiClientError, apiClient } = await import('@/api/api-client')
+    const controller = new AbortController()
+    const request = apiClient('profile').get('me', { signal: controller.signal, timeoutMs: 50 })
+    controller.abort()
+
+    await expect(request).rejects.toBeInstanceOf(ApiClientError)
+    await expect(request).rejects.toMatchObject({
+      message: 'Request aborted',
+      status: undefined,
+    })
+  })
+
+  it('does not create an internal timeout controller for non-positive timeouts', async () => {
+    ;(globalThis.fetch as jest.Mock).mockResolvedValue(createJsonResponse({ ok: true }))
+
+    const { apiClient } = await import('@/api/api-client')
+    const controller = new AbortController()
+
+    await apiClient('profile').get('me', { signal: controller.signal, timeoutMs: 0 })
+
+    const request = (globalThis.fetch as jest.Mock).mock.calls[0][1]
+    expect(request.signal).toBe(controller.signal)
+  })
+
+  it('aborts immediately when the caller signal is already aborted', async () => {
+    ;(globalThis.fetch as jest.Mock).mockImplementation((_url: string, init?: RequestInit) => {
+      return new Promise((_, reject) => {
+        if (init?.signal?.aborted) {
+          const abortError = new Error('Aborted')
+          abortError.name = 'AbortError'
+          reject(abortError)
+        }
+      })
+    })
+
+    const { ApiClientError, apiClient } = await import('@/api/api-client')
+    const controller = new AbortController()
+    controller.abort()
+
+    const request = apiClient('profile').get('me', { signal: controller.signal, timeoutMs: 50 })
+
+    await expect(request).rejects.toBeInstanceOf(ApiClientError)
+    await expect(request).rejects.toMatchObject({
+      message: 'Request aborted',
+      status: undefined,
+    })
+  })
+
+  it('returns the refreshed token when the initial access token is missing', async () => {
+    getAccessToken.mockReturnValueOnce(null)
+    getRefreshToken.mockReturnValueOnce('refresh-token')
+    refresh.mockResolvedValueOnce({ accessToken: 'refreshed-token' })
+    ;(globalThis.fetch as jest.Mock).mockResolvedValueOnce(createJsonResponse({ id: 'user-1' }))
+
+    const { apiClient } = await import('@/api/api-client')
+    const response = await apiClient('profile').get<{ id: string }>('me')
+
+    const headers = (globalThis.fetch as jest.Mock).mock.calls[0][1].headers as Headers
+    expect(headers.get('Authorization')).toBe('Bearer refreshed-token')
+    expect(response.data).toEqual({ id: 'user-1' })
   })
 })
