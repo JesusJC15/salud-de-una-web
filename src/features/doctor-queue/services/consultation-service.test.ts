@@ -68,7 +68,10 @@ describe('consultationService', () => {
 
       const result = await consultationService.close('c1')
 
-      expect(mockPatch).toHaveBeenCalledWith('consultations/c1/close')
+      expect(mockPatch).toHaveBeenCalledWith('consultations/c1/close', {
+        baselineSymptomSeverity: 5,
+        redFlagsConfirmed: false,
+      })
       expect(result).toEqual(response)
     })
   })
