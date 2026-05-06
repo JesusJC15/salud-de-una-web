@@ -2,8 +2,9 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "module": "commonjs",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "types": ["jest", "node"],
+    "isolatedModules": false,
     "verbatimModuleSyntax": false
   }
 }
