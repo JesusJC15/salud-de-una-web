@@ -1,98 +1,152 @@
-import { authService, initAuthService } from './auth-service'
-
 describe('authService (Auth0 adapter)', () => {
-  const mockGetToken = jest.fn()
-  const mockLogout = jest.fn()
+  const mockGetToken = jest.fn<Promise<string>, []>()
+  const mockLogout = jest.fn<void, [{ logoutParams: { returnTo: string } }]>()
+  const originalFetch = globalThis.fetch
+
+  function mockBrowserSessionStorage(initialValues?: Record<string, string>) {
+    const store = new Map(Object.entries(initialValues ?? {}))
+    const sessionStorage = {
+      getItem: jest.fn((key: string) => store.get(key) ?? null),
+      setItem: jest.fn((key: string, value: string) => {
+        store.set(key, value)
+      }),
+      removeItem: jest.fn((key: string) => {
+        store.delete(key)
+      }),
+    }
+
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      value: { location: { origin: 'https://staff.salud-de-una.com' } },
+    })
+    Object.defineProperty(globalThis, 'sessionStorage', {
+      configurable: true,
+      value: sessionStorage,
+    })
+
+    return sessionStorage
+  }
+
+  async function importFreshAuthService() {
+    jest.resetModules()
+    return import('./auth-service')
+  }
 
   beforeEach(() => {
     jest.clearAllMocks()
-    // Reset to uninitialized state between tests
+    delete (globalThis as Partial<typeof globalThis>).window
+    delete (globalThis as Partial<typeof globalThis>).sessionStorage
+    delete process.env.NEXT_PUBLIC_API_BASE_URL
+  })
+
+  afterAll(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  it('returns null when not initialized and there is no browser session', async () => {
+    const { authService } = await importFreshAuthService()
+
+    await expect(authService.getAccessToken()).resolves.toBeNull()
+    expect(authService.getRefreshToken()).toBeNull()
+    expect(authService.isAuthenticated()).toBe(false)
+  })
+
+  it('stores and reads legacy session tokens from sessionStorage', async () => {
+    const sessionStorage = mockBrowserSessionStorage()
+    const { authService, initAuthService } = await importFreshAuthService()
     initAuthService(mockGetToken, mockLogout, false)
+
+    authService.initLegacySession('legacy-access', 'legacy-refresh')
+
+    expect(sessionStorage.setItem).toHaveBeenCalledWith('salud-de-una.legacy.access', 'legacy-access')
+    expect(sessionStorage.setItem).toHaveBeenCalledWith('salud-de-una.legacy.refresh', 'legacy-refresh')
+    expect(authService.isAuthenticated()).toBe(true)
+    expect(authService.getRefreshToken()).toBe('legacy-refresh')
   })
 
-  describe('before initAuthService', () => {
-    it('getAccessToken returns null when not initialized', async () => {
-      // Re-import to get fresh module state
-      initAuthService(() => Promise.reject(new Error('not init')), mockLogout, false)
-      const { authService: freshService } = await import('./auth-service')
-      const token = await freshService.getAccessToken()
-      expect(token).toBeNull()
+  it('falls back to the legacy access token when Auth0 token retrieval fails', async () => {
+    mockBrowserSessionStorage({
+      'salud-de-una.legacy.access': 'legacy-access',
+      'salud-de-una.legacy.refresh': 'legacy-refresh',
     })
+    mockGetToken.mockRejectedValue(new Error('Login required'))
 
-    it('isAuthenticated returns false when not initialized', () => {
-      initAuthService(mockGetToken, mockLogout, false)
-      expect(authService.isAuthenticated()).toBe(false)
-    })
+    const { authService, initAuthService } = await importFreshAuthService()
+    initAuthService(mockGetToken, mockLogout, false)
 
-    it('getRefreshToken returns null when not authenticated', () => {
-      initAuthService(mockGetToken, mockLogout, false)
-      expect(authService.getRefreshToken()).toBeNull()
-    })
+    await expect(authService.getAccessToken()).resolves.toBe('legacy-access')
   })
 
-  describe('after initAuthService with isAuthenticated=true', () => {
-    beforeEach(() => {
-      initAuthService(mockGetToken, mockLogout, true)
+  it('returns the Auth0 token when authenticated', async () => {
+    mockGetToken.mockResolvedValue('auth0-access-token')
+
+    const { authService, initAuthService } = await importFreshAuthService()
+    initAuthService(mockGetToken, mockLogout, true)
+
+    await expect(authService.getAccessToken()).resolves.toBe('auth0-access-token')
+    await expect(authService.refresh()).resolves.toEqual({ accessToken: 'auth0-access-token' })
+    expect(authService.getRefreshToken()).toBe('__auth0_managed__')
+    expect(authService.isAuthenticated()).toBe(true)
+  })
+
+  it('refreshes a legacy session and preserves the previous refresh token when the backend omits a new one', async () => {
+    const sessionStorage = mockBrowserSessionStorage({
+      'salud-de-una.legacy.refresh': 'legacy-refresh',
     })
+    globalThis.fetch = jest.fn().mockResolvedValue(
+      new Response(JSON.stringify({ accessToken: 'new-access-token' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ) as typeof fetch
 
-    it('getAccessToken returns token from Auth0', async () => {
-      mockGetToken.mockResolvedValue('test-access-token')
+    const { authService } = await importFreshAuthService()
 
-      const token = await authService.getAccessToken()
-
-      expect(token).toBe('test-access-token')
-      expect(mockGetToken).toHaveBeenCalledTimes(1)
+    await expect(authService.refresh()).resolves.toEqual({ accessToken: 'new-access-token' })
+    expect(globalThis.fetch).toHaveBeenCalledWith('http://localhost:3000/v1/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: 'legacy-refresh' }),
     })
+    expect(sessionStorage.setItem).toHaveBeenCalledWith('salud-de-una.legacy.access', 'new-access-token')
+    expect(sessionStorage.setItem).toHaveBeenCalledWith('salud-de-una.legacy.refresh', 'legacy-refresh')
+  })
 
-    it('getAccessToken returns null when Auth0 throws', async () => {
-      mockGetToken.mockRejectedValue(new Error('Login required'))
-
-      const token = await authService.getAccessToken()
-
-      expect(token).toBeNull()
+  it('clears the legacy session when refresh fails or the backend rejects it', async () => {
+    const sessionStorage = mockBrowserSessionStorage({
+      'salud-de-una.legacy.refresh': 'legacy-refresh',
     })
+    globalThis.fetch = jest.fn().mockResolvedValue(new Response(null, { status: 401 })) as typeof fetch
 
-    it('isAuthenticated returns true', () => {
-      expect(authService.isAuthenticated()).toBe(true)
+    const { authService } = await importFreshAuthService()
+
+    await expect(authService.refresh()).resolves.toBeNull()
+    expect(sessionStorage.removeItem).toHaveBeenCalledWith('salud-de-una.legacy.access')
+    expect(sessionStorage.removeItem).toHaveBeenCalledWith('salud-de-una.legacy.refresh')
+
+    authService.initLegacySession('legacy-access', 'legacy-refresh')
+    ;(globalThis.fetch as jest.Mock).mockRejectedValueOnce(new Error('socket hang up'))
+    await expect(authService.refresh()).resolves.toBeNull()
+  })
+
+  it('logs out through Auth0 in the browser and resets internal state', async () => {
+    const sessionStorage = mockBrowserSessionStorage({
+      'salud-de-una.legacy.access': 'legacy-access',
+      'salud-de-una.legacy.refresh': 'legacy-refresh',
     })
+    mockGetToken.mockResolvedValue('auth0-access-token')
 
-    it('getRefreshToken returns sentinel (non-null) when authenticated', () => {
-      expect(authService.getRefreshToken()).not.toBeNull()
+    const { authService, initAuthService } = await importFreshAuthService()
+    initAuthService(mockGetToken, mockLogout, true)
+
+    await authService.logout()
+
+    expect(sessionStorage.removeItem).toHaveBeenCalledWith('salud-de-una.legacy.access')
+    expect(sessionStorage.removeItem).toHaveBeenCalledWith('salud-de-una.legacy.refresh')
+    expect(mockLogout).toHaveBeenCalledWith({
+      logoutParams: { returnTo: 'https://staff.salud-de-una.com' },
     })
-
-    it('refresh delegates to getAccessToken', async () => {
-      mockGetToken.mockResolvedValue('refreshed-token')
-
-      const result = await authService.refresh()
-
-      expect(result?.accessToken).toBe('refreshed-token')
-    })
-
-    it('refresh returns null when Auth0 token retrieval fails', async () => {
-      mockGetToken.mockRejectedValue(new Error('Consent required'))
-
-      const result = await authService.refresh()
-
-      // getAccessToken returns null → refresh returns null (not {accessToken:null})
-      expect(result).toBeNull()
-    })
-
-    it('logout calls Auth0 logout with returnTo and clears state', async () => {
-      Object.defineProperty(globalThis, 'sessionStorage', {
-        configurable: true,
-        value: { removeItem: jest.fn(), getItem: jest.fn(() => null), setItem: jest.fn() },
-      })
-      Object.defineProperty(globalThis, 'window', {
-        configurable: true,
-        value: { location: { origin: 'https://staff.salud-de-una.com' } },
-      })
-
-      await authService.logout()
-
-      expect(mockLogout).toHaveBeenCalledWith({
-        logoutParams: { returnTo: 'https://staff.salud-de-una.com' },
-      })
-      expect(authService.isAuthenticated()).toBe(false)
-    })
+    expect(authService.isAuthenticated()).toBe(false)
+    await expect(authService.getAccessToken()).resolves.toBeNull()
   })
 })
