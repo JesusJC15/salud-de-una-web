@@ -116,4 +116,48 @@ describe('consultationService', () => {
       })
     })
   })
+
+  describe('submitSummaryFeedback', () => {
+    it('patches summary feedback and returns result', async () => {
+      mockPatch.mockResolvedValue({ data: { id: 'c1' } })
+
+      const result = await consultationService.submitSummaryFeedback('c1', { value: 'USEFUL' })
+
+      expect(mockPatch).toHaveBeenCalledWith('consultations/c1/summary/feedback', { value: 'USEFUL' })
+      expect(result).toEqual({ id: 'c1' })
+    })
+
+    it('passes optional comment when provided', async () => {
+      mockPatch.mockResolvedValue({ data: { id: 'c1' } })
+
+      await consultationService.submitSummaryFeedback('c1', { value: 'NOT_USEFUL', comment: 'Irrelevante' })
+
+      expect(mockPatch).toHaveBeenCalledWith('consultations/c1/summary/feedback', {
+        value: 'NOT_USEFUL',
+        comment: 'Irrelevante',
+      })
+    })
+  })
+
+  describe('getPatientTimeline', () => {
+    it('uses default limit when not provided', async () => {
+      mockGet.mockResolvedValue({ data: { items: [], nextCursor: null } })
+
+      await consultationService.getPatientTimeline('p1')
+
+      expect(mockGet).toHaveBeenCalledWith('patients/p1/timeline', {
+        params: { cursor: undefined, limit: 20 },
+      })
+    })
+
+    it('passes cursor and custom limit when provided', async () => {
+      mockGet.mockResolvedValue({ data: { items: [], nextCursor: null } })
+
+      await consultationService.getPatientTimeline('p1', { cursor: 'abc', limit: 10 })
+
+      expect(mockGet).toHaveBeenCalledWith('patients/p1/timeline', {
+        params: { cursor: 'abc', limit: 10 },
+      })
+    })
+  })
 })

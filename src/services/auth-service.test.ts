@@ -139,6 +139,75 @@ describe('authService (Auth0 adapter)', () => {
     await expect(authService.refresh()).resolves.toBeNull()
   })
 
+  it('syncClientSession syncs the token to the server cookie', async () => {
+    mockBrowserSessionStorage()
+    globalThis.fetch = jest.fn().mockResolvedValue(new Response('{}', { status: 200 })) as typeof fetch
+
+    const { authService } = await importFreshAuthService()
+
+    await authService.syncClientSession('some-token')
+
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/session', expect.objectContaining({ method: 'POST' }))
+  })
+
+  it('syncClientSession with null token clears the server cookie', async () => {
+    mockBrowserSessionStorage()
+    globalThis.fetch = jest.fn().mockResolvedValue(new Response('{}', { status: 200 })) as typeof fetch
+
+    const { authService } = await importFreshAuthService()
+
+    await authService.syncClientSession(null)
+
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/session', expect.objectContaining({ method: 'DELETE' }))
+  })
+
+  it('getCurrentUser returns user when token is valid and backend responds ok', async () => {
+    mockBrowserSessionStorage()
+    const mockUser = { id: 'u1', email: 'doc@test.com', role: 'DOCTOR' }
+    globalThis.fetch = jest.fn().mockResolvedValue(
+      new Response(JSON.stringify({ user: mockUser }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    ) as typeof fetch
+
+    const { authService } = await importFreshAuthService()
+
+    const result = await authService.getCurrentUser('valid-token')
+
+    expect(result).toEqual(mockUser)
+  })
+
+  it('getCurrentUser returns null when token override is not provided and no token exists', async () => {
+    const { authService } = await importFreshAuthService()
+
+    const result = await authService.getCurrentUser()
+
+    expect(result).toBeNull()
+  })
+
+  it('getCurrentUser returns null when backend responds with non-ok status', async () => {
+    mockBrowserSessionStorage()
+    globalThis.fetch = jest.fn().mockResolvedValue(new Response(null, { status: 401 })) as typeof fetch
+
+    const { authService } = await importFreshAuthService()
+
+    const result = await authService.getCurrentUser('expired-token')
+
+    expect(result).toBeNull()
+  })
+
+  it('getCurrentUser returns null when fetch throws', async () => {
+    mockBrowserSessionStorage()
+    globalThis.fetch = jest.fn().mockRejectedValue(new Error('network error')) as typeof fetch
+
+    const { authService } = await importFreshAuthService()
+
+    const result = await authService.getCurrentUser('some-token')
+
+    expect(result).toBeNull()
+  })
+
   it('logs out through Auth0 in the browser and resets internal state', async () => {
     const sessionStorage = mockBrowserSessionStorage({
       'salud-de-una.legacy.access': 'legacy-access',

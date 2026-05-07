@@ -41,6 +41,7 @@ module.exports = {
     '!src/app/**/loading.tsx',
     '!src/app/**/error.tsx',
     '!src/app/**/not-found.tsx',
+    '!src/app/**/route.ts',
     '!src/features/**/components/**',
     '!src/features/**/pages/**',
     '!src/features/**/layouts/**',
