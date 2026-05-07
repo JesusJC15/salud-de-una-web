@@ -700,10 +700,9 @@ export function AdminHomePage() {
           <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-slate-400">
             Acceso Rápido
           </h2>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <QuickActionBtn href="/doctor/queue" icon={Activity} label="Cola de consultas" />
             <QuickActionBtn href="/admin/doctors" icon={Users} label="Doctores" />
-            <QuickActionBtn href={`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/docs`} icon={TrendingUp} label="API Docs" external />
             <QuickActionBtn href="/admin/users" icon={ShieldCheck} label="Usuarios" />
           </div>
         </section>

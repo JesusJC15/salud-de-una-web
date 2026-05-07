@@ -6,13 +6,13 @@ import { useEffect, useRef, useState } from 'react'
 import { trimTrailingSlashes } from '@/lib/utils'
 import { authService } from '@/services/auth-service'
 
-type ProvisionState = 'loading' | 'error'
+type CallbackState = 'loading' | 'provisioning' | 'error'
 
 export default function CallbackPage() {
   const { isLoading, isAuthenticated, error, getAccessTokenSilently } = useAuth0()
   const router = useRouter()
   const handledRef = useRef(false)
-  const [state, setState] = useState<ProvisionState>('loading')
+  const [state, setState] = useState<CallbackState>('loading')
   const [errorMessage, setErrorMessage] = useState<string>('')
 
   useEffect(() => {
@@ -37,6 +37,7 @@ export default function CallbackPage() {
         const token = await getAccessTokenSilently({ authorizationParams: { audience } })
         const pendingProvision = sessionStorage.getItem('salud-de-una.pending-provision')
 
+        // ── Explicit provision from registration form ─────────────────────────
         if (pendingProvision) {
           sessionStorage.removeItem('salud-de-una.pending-provision')
 
@@ -55,13 +56,57 @@ export default function CallbackPage() {
           }
         }
 
-        const currentUser = await authService.getCurrentUser(token)
+        // ── Try to get the current user ───────────────────────────────────────
+        let currentUser = await authService.getCurrentUser(token)
+
+        // ── Auto-provision: account exists in Auth0 but not yet linked ────────
+        // Happens when a user registered with email/password and then logs in
+        // with Auth0 for the first time — their MongoDB record exists but
+        // app_metadata.db_id hasn't been set yet.
+        if (!currentUser && !pendingProvision) {
+          setState('provisioning')
+
+          const provisionRes = await fetch(`${baseUrl}/v1/auth/provision/doctor`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({}),
+          })
+
+          if (provisionRes.ok) {
+            // Provisioning set app_metadata.db_id in Auth0.
+            // Get a fresh token so the Post-Login Action injects the new claims.
+            const freshToken = await getAccessTokenSilently({
+              authorizationParams: { audience },
+              cacheMode: 'off',
+            })
+            currentUser = await authService.getCurrentUser(freshToken)
+            if (currentUser) {
+              await authService.syncClientSession(freshToken)
+              router.replace('/dashboard')
+              return
+            }
+
+            // Provisioning succeeded but still no session: Post-Login Action
+            // not yet deployed in Auth0. Guide the user.
+            throw new Error(
+              'Tu cuenta fue vinculada correctamente. Cerrá sesión en Auth0 y volvé a iniciar sesión para completar el proceso.',
+            )
+          }
+          else {
+            // Not a doctor — may be an admin or a patient using the wrong portal
+            const body = await provisionRes.json().catch(() => ({})) as { message?: string }
+            throw new Error(
+              body.message
+              ?? 'No fue posible vincular tu cuenta. Si sos administrador, tu acceso debe ser activado manualmente.',
+            )
+          }
+        }
+
         if (!currentUser) {
           throw new Error('No fue posible vincular tu cuenta con un perfil de SaludDeUna')
         }
 
         await authService.syncClientSession(token)
-
         router.replace('/dashboard')
       }
       catch (err) {
@@ -92,6 +137,7 @@ export default function CallbackPage() {
           <p className="text-sm font-medium text-slate-800">Error al completar el inicio de sesión</p>
           <p className="text-xs text-slate-500">{errorMessage}</p>
           <button
+            type="button"
             onClick={() => router.replace('/login')}
             className="text-sm text-teal-600 underline hover:text-teal-700"
           >
@@ -106,7 +152,9 @@ export default function CallbackPage() {
     <div className="flex min-h-screen items-center justify-center">
       <div className="flex flex-col items-center gap-4">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-teal-500 border-t-transparent" />
-        <p className="text-sm text-slate-500">Verificando sesión...</p>
+        <p className="text-sm text-slate-500">
+          {state === 'provisioning' ? 'Vinculando tu cuenta...' : 'Verificando sesión...'}
+        </p>
       </div>
     </div>
   )
