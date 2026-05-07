@@ -2,7 +2,12 @@ import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 
 const ACCESS_TOKEN_COOKIE = 'salud-de-una.access-token'
-const TRAILING_SLASH = /\/+$/
+
+function trimTrailingSlashes(url: string): string {
+  let end = url.length
+  while (end > 0 && url[end - 1] === '/') end--
+  return end === url.length ? url : url.slice(0, end)
+}
 
 function applySecurityHeaders(res: NextResponse) {
   res.headers.set('X-Frame-Options', 'DENY')
@@ -14,9 +19,20 @@ function applySecurityHeaders(res: NextResponse) {
   res.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload')
   const auth0Domain = process.env.NEXT_PUBLIC_AUTH0_DOMAIN ?? ''
   const auth0Origin = auth0Domain ? `https://${auth0Domain}` : ''
+  const apiOrigin = trimTrailingSlashes(process.env.NEXT_PUBLIC_API_BASE_URL ?? '')
   res.headers.set(
     'Content-Security-Policy',
-    `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https: ${auth0Origin}; frame-src ${auth0Origin}; frame-ancestors 'none';`,
+    [
+      `default-src 'self'`,
+      `script-src 'self' 'unsafe-inline' 'unsafe-eval'`,
+      `worker-src blob: 'self'`,
+      `style-src 'self' 'unsafe-inline'`,
+      `img-src 'self' data: https:`,
+      `font-src 'self' data:`,
+      `connect-src 'self' https: wss: ${apiOrigin} ${auth0Origin}`,
+      `frame-src ${auth0Origin}`,
+      `frame-ancestors 'none'`,
+    ].join('; '),
   )
 }
 
@@ -34,7 +50,7 @@ export async function middleware(req: NextRequest) {
       return redirect
     }
 
-    const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000').replace(TRAILING_SLASH, '')
+    const apiBaseUrl = trimTrailingSlashes(process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000')
 
     try {
       const response = await fetch(`${apiBaseUrl}/v1/auth/me`, {
