@@ -8,8 +8,12 @@ import { authService } from '@/services/auth-service'
 
 type CallbackState = 'loading' | 'provisioning' | 'error'
 
+// Guard key that prevents re-entering the auto-provision loop if Auth0's
+// silent re-auth somehow returns a token that still lacks db_id.
+const PROVISION_ATTEMPTED_KEY = 'salud-de-una.provision-attempted'
+
 export default function CallbackPage() {
-  const { isLoading, isAuthenticated, error, getAccessTokenSilently } = useAuth0()
+  const { isLoading, isAuthenticated, error, getAccessTokenSilently, loginWithRedirect } = useAuth0()
   const router = useRouter()
   const handledRef = useRef(false)
   const [state, setState] = useState<CallbackState>('loading')
@@ -20,6 +24,7 @@ export default function CallbackPage() {
       return
 
     if (error) {
+      sessionStorage.removeItem(PROVISION_ATTEMPTED_KEY)
       router.replace(`/login?error=${encodeURIComponent(error.message)}`)
       return
     }
@@ -34,6 +39,7 @@ export default function CallbackPage() {
         const audience = process.env.NEXT_PUBLIC_AUTH0_AUDIENCE
         const baseUrl = trimTrailingSlashes(process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000')
 
+        // Auth0 issues a fresh token for this page load; the SDK caches it.
         const token = await getAccessTokenSilently({ authorizationParams: { audience } })
         const pendingProvision = sessionStorage.getItem('salud-de-una.pending-provision')
 
@@ -59,11 +65,20 @@ export default function CallbackPage() {
         // ── Try to get the current user ───────────────────────────────────────
         let currentUser = await authService.getCurrentUser(token)
 
-        // ── Auto-provision: account exists in Auth0 but not yet linked ────────
-        // Happens when a user registered with email/password and then logs in
-        // with Auth0 for the first time — their MongoDB record exists but
-        // app_metadata.db_id hasn't been set yet.
+        // ── Auto-provision: Auth0 account not yet linked to MongoDB ───────────
+        // This happens when a user registered with email/password and then logs
+        // in via Auth0 for the first time. Their MongoDB record exists but
+        // app_metadata.db_id hasn't been set, so the token has no db_id claim.
         if (!currentUser && !pendingProvision) {
+          // Loop guard: if we already tried once (silent re-auth came back but
+          // still no db_id), stop and show an error.
+          if (sessionStorage.getItem(PROVISION_ATTEMPTED_KEY)) {
+            sessionStorage.removeItem(PROVISION_ATTEMPTED_KEY)
+            throw new Error(
+              'No fue posible vincular tu cuenta. Verificá que el doctor esté registrado o contactá al administrador.',
+            )
+          }
+
           setState('provisioning')
 
           const provisionRes = await fetch(`${baseUrl}/v1/auth/provision/doctor`, {
@@ -72,40 +87,37 @@ export default function CallbackPage() {
             body: JSON.stringify({}),
           })
 
-          if (provisionRes.ok) {
-            // Provisioning set app_metadata.db_id in Auth0.
-            // Get a fresh token so the Post-Login Action injects the new claims.
-            const freshToken = await getAccessTokenSilently({
-              authorizationParams: { audience },
-              cacheMode: 'off',
-            })
-            currentUser = await authService.getCurrentUser(freshToken)
-            if (currentUser) {
-              await authService.syncClientSession(freshToken)
-              router.replace('/dashboard')
-              return
-            }
-
-            // Provisioning succeeded but still no session: Post-Login Action
-            // not yet deployed in Auth0. Guide the user.
-            throw new Error(
-              'Tu cuenta fue vinculada correctamente. Cerrá sesión en Auth0 y volvé a iniciar sesión para completar el proceso.',
-            )
-          }
-          else {
-            // Not a doctor — may be an admin or a patient using the wrong portal
+          if (!provisionRes.ok) {
             const body = await provisionRes.json().catch(() => ({})) as { message?: string }
             throw new Error(
               body.message
               ?? 'No fue posible vincular tu cuenta. Si sos administrador, tu acceso debe ser activado manualmente.',
             )
           }
+
+          // Provisioning updated app_metadata.db_id in Auth0.
+          // The current token cache holds the old token (no db_id) — using
+          // cacheMode:'off' bypasses the cache but does NOT update it, so the
+          // AuthServiceInitializer on the next page would re-sync the cookie
+          // with the stale cached token, breaking middleware validation.
+          //
+          // Instead, force a full silent re-authentication: Auth0 runs the
+          // Post-Login Action again on a fresh token request, picking up the
+          // new db_id from app_metadata and caching the result. The next visit
+          // to /callback will have a valid token and complete normally.
+          sessionStorage.setItem(PROVISION_ATTEMPTED_KEY, '1')
+          await loginWithRedirect({
+            authorizationParams: { audience, prompt: 'none' },
+          })
+          return
         }
 
         if (!currentUser) {
           throw new Error('No fue posible vincular tu cuenta con un perfil de SaludDeUna')
         }
 
+        // Success — clean up guard flag, sync session cookie, navigate.
+        sessionStorage.removeItem(PROVISION_ATTEMPTED_KEY)
         await authService.syncClientSession(token)
         router.replace('/dashboard')
       }
@@ -122,6 +134,7 @@ export default function CallbackPage() {
     isAuthenticated,
     error,
     getAccessTokenSilently,
+    loginWithRedirect,
     router,
   ])
 
