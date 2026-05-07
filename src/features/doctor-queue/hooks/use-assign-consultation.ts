@@ -10,6 +10,7 @@ export function useAssignConsultation() {
     mutationFn: (id: string) => consultationService.assign(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['doctor', 'consultation-queue'] })
+      void queryClient.invalidateQueries({ queryKey: ['doctor', 'history'] })
     },
   })
 }

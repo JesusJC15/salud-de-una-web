@@ -3,6 +3,7 @@
 import type { ConsultationPriority, QueueItem } from '@/features/doctor-queue/services/consultation-service'
 import { useAuth0 } from '@auth0/auth0-react'
 import { AlertTriangle, Brain, ChevronDown, ChevronRight, Clock, LogOut, PauseCircle, Sparkles, Stethoscope, Timer } from 'lucide-react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { NotificationBell } from '@/components/notification-bell'
@@ -347,12 +348,12 @@ export function DoctorHomePage() {
           </div>
           <div className="flex items-center gap-3">
             <NotificationBell />
-            <a
+            <Link
               href="/doctor/history"
               className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-teal-300 hover:text-teal-600 transition-colors"
             >
               Historial
-            </a>
+            </Link>
             <button
               onClick={toggle}
               disabled={isUpdating}

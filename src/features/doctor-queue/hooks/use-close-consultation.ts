@@ -18,6 +18,7 @@ export function useCloseConsultation(consultationId: string) {
         ],
       })
       void queryClient.invalidateQueries({ queryKey: ['doctor', 'consultation-queue'] })
+      void queryClient.invalidateQueries({ queryKey: ['doctor', 'history'] })
       void queryClient.invalidateQueries({ queryKey: ['admin', 'business-metrics'] })
       void queryClient.invalidateQueries({ queryKey: ['admin', 'consultation-metrics'] })
     },
