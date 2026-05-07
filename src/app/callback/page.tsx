@@ -8,12 +8,12 @@ import { authService } from '@/services/auth-service'
 
 type CallbackState = 'loading' | 'provisioning' | 'error'
 
-// Guard key that prevents re-entering the auto-provision loop if Auth0's
-// silent re-auth somehow returns a token that still lacks db_id.
+// Prevents re-entering the auto-provision block after a page reload.
+// If the reloaded token still lacks db_id we stop and show an error.
 const PROVISION_ATTEMPTED_KEY = 'salud-de-una.provision-attempted'
 
 export default function CallbackPage() {
-  const { isLoading, isAuthenticated, error, getAccessTokenSilently, loginWithRedirect } = useAuth0()
+  const { isLoading, isAuthenticated, error, getAccessTokenSilently } = useAuth0()
   const router = useRouter()
   const handledRef = useRef(false)
   const [state, setState] = useState<CallbackState>('loading')
@@ -39,7 +39,6 @@ export default function CallbackPage() {
         const audience = process.env.NEXT_PUBLIC_AUTH0_AUDIENCE
         const baseUrl = trimTrailingSlashes(process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000')
 
-        // Auth0 issues a fresh token for this page load; the SDK caches it.
         const token = await getAccessTokenSilently({ authorizationParams: { audience } })
         const pendingProvision = sessionStorage.getItem('salud-de-una.pending-provision')
 
@@ -66,12 +65,12 @@ export default function CallbackPage() {
         let currentUser = await authService.getCurrentUser(token)
 
         // ── Auto-provision: Auth0 account not yet linked to MongoDB ───────────
-        // This happens when a user registered with email/password and then logs
-        // in via Auth0 for the first time. Their MongoDB record exists but
-        // app_metadata.db_id hasn't been set, so the token has no db_id claim.
+        // Happens when the user registered with email/password and this is
+        // their first Auth0 login. app_metadata.db_id hasn't been set yet
+        // so the token carries no db_id claim.
         if (!currentUser && !pendingProvision) {
-          // Loop guard: if we already tried once (silent re-auth came back but
-          // still no db_id), stop and show an error.
+          // Loop guard: if we already provisioned and reloaded but db_id
+          // is still missing, stop and show an error.
           if (sessionStorage.getItem(PROVISION_ATTEMPTED_KEY)) {
             sessionStorage.removeItem(PROVISION_ATTEMPTED_KEY)
             throw new Error(
@@ -96,19 +95,17 @@ export default function CallbackPage() {
           }
 
           // Provisioning updated app_metadata.db_id in Auth0.
-          // The current token cache holds the old token (no db_id) — using
-          // cacheMode:'off' bypasses the cache but does NOT update it, so the
-          // AuthServiceInitializer on the next page would re-sync the cookie
-          // with the stale cached token, breaking middleware validation.
+          // We need a fresh token that includes the new claim. The safest
+          // approach is a full page reload: the Auth0 SDK re-initialises
+          // with an empty in-memory cache, uses the refresh token to
+          // obtain a new access token, and the Post-Login Action injects
+          // db_id from the freshly-written app_metadata.
           //
-          // Instead, force a full silent re-authentication: Auth0 runs the
-          // Post-Login Action again on a fresh token request, picking up the
-          // new db_id from app_metadata and caching the result. The next visit
-          // to /callback will have a valid token and complete normally.
+          // We do NOT use loginWithRedirect here — calling it inside a
+          // useEffect with Auth0 SDK functions in the dependency array
+          // can trigger an infinite re-render loop that freezes the browser.
           sessionStorage.setItem(PROVISION_ATTEMPTED_KEY, '1')
-          await loginWithRedirect({
-            authorizationParams: { audience, prompt: 'none' },
-          })
+          window.location.reload()
           return
         }
 
@@ -116,7 +113,7 @@ export default function CallbackPage() {
           throw new Error('No fue posible vincular tu cuenta con un perfil de SaludDeUna')
         }
 
-        // Success — clean up guard flag, sync session cookie, navigate.
+        // Success — clean up guard, sync session cookie, navigate to app.
         sessionStorage.removeItem(PROVISION_ATTEMPTED_KEY)
         await authService.syncClientSession(token)
         router.replace('/dashboard')
@@ -129,14 +126,7 @@ export default function CallbackPage() {
     }
 
     void handleCallback()
-  }, [
-    isLoading,
-    isAuthenticated,
-    error,
-    getAccessTokenSilently,
-    loginWithRedirect,
-    router,
-  ])
+  }, [isLoading, isAuthenticated, error, getAccessTokenSilently, router])
 
   if (state === 'error') {
     return (
