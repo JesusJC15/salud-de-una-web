@@ -36,9 +36,80 @@ function applySecurityHeaders(res: NextResponse) {
   )
 }
 
+async function validateToken(
+  accessToken: string,
+  apiBaseUrl: string,
+): Promise<{ role: string } | null> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 3000)
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/v1/auth/me`, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      cache: 'no-store',
+      signal: controller.signal,
+    })
+
+    if (!response.ok)
+      return null
+
+    const payload = await response.json() as { user?: { role?: string } }
+    return payload.user?.role ? { role: payload.user.role } : null
+  }
+  catch {
+    return null
+  }
+  finally {
+    clearTimeout(timeoutId)
+  }
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
+  const apiBaseUrl = trimTrailingSlashes(process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000')
 
+  // ── Doctor route protection ──────────────────────────────────────────────
+  if (pathname.startsWith('/doctor')) {
+    const accessToken = req.cookies.get(ACCESS_TOKEN_COOKIE)?.value?.trim()
+
+    if (!accessToken) {
+      const loginUrl = new URL('/login', req.url)
+      loginUrl.searchParams.set('next', pathname)
+      const redirect = NextResponse.redirect(loginUrl)
+      applySecurityHeaders(redirect)
+      return redirect
+    }
+
+    const user = await validateToken(accessToken, apiBaseUrl)
+
+    if (!user) {
+      // Token expired or network error — clear cookie and send to login
+      const loginUrl = new URL('/login', req.url)
+      loginUrl.searchParams.set('next', pathname)
+      const redirect = NextResponse.redirect(loginUrl)
+      redirect.cookies.set(ACCESS_TOKEN_COOKIE, '', {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: 0,
+      })
+      applySecurityHeaders(redirect)
+      return redirect
+    }
+
+    if (user.role !== 'DOCTOR') {
+      const redirect = NextResponse.redirect(new URL('/dashboard', req.url))
+      applySecurityHeaders(redirect)
+      return redirect
+    }
+  }
+
+  // ── Admin route protection ───────────────────────────────────────────────
   if (pathname.startsWith('/admin')) {
     const accessToken = req.cookies.get(ACCESS_TOKEN_COOKIE)?.value?.trim()
 
@@ -50,46 +121,25 @@ export async function middleware(req: NextRequest) {
       return redirect
     }
 
-    const apiBaseUrl = trimTrailingSlashes(process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000')
+    const user = await validateToken(accessToken, apiBaseUrl)
 
-    try {
-      const response = await fetch(`${apiBaseUrl}/v1/auth/me`, {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        cache: 'no-store',
+    if (!user) {
+      // Token expired or network error — clear cookie and send to login
+      const loginUrl = new URL('/login', req.url)
+      loginUrl.searchParams.set('next', pathname)
+      const redirect = NextResponse.redirect(loginUrl)
+      redirect.cookies.set(ACCESS_TOKEN_COOKIE, '', {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: 0,
       })
-
-      if (!response.ok) {
-        const loginUrl = new URL('/login', req.url)
-        loginUrl.searchParams.set('next', pathname)
-        const redirect = NextResponse.redirect(loginUrl)
-        redirect.cookies.set(ACCESS_TOKEN_COOKIE, '', {
-          httpOnly: true,
-          sameSite: 'lax',
-          secure: process.env.NODE_ENV === 'production',
-          path: '/',
-          maxAge: 0,
-        })
-        applySecurityHeaders(redirect)
-        return redirect
-      }
-
-      const payload = await response.json() as {
-        user?: {
-          role?: string
-        }
-      }
-
-      if (payload.user?.role !== 'ADMIN') {
-        const redirect = NextResponse.redirect(new URL('/dashboard', req.url))
-        applySecurityHeaders(redirect)
-        return redirect
-      }
+      applySecurityHeaders(redirect)
+      return redirect
     }
-    catch {
+
+    if (user.role !== 'ADMIN') {
       const redirect = NextResponse.redirect(new URL('/dashboard', req.url))
       applySecurityHeaders(redirect)
       return redirect

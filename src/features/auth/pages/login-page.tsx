@@ -11,7 +11,8 @@ import { authService } from '@/services/auth-service'
 
 function RegistrationSuccessBanner() {
   const searchParams = useSearchParams()
-  if (searchParams.get('registered') !== '1') return null
+  if (searchParams.get('registered') !== '1')
+    return null
 
   return (
     <motion.div
@@ -22,7 +23,9 @@ function RegistrationSuccessBanner() {
     >
       <CheckCircle className="h-5 w-5 shrink-0 text-teal-600" />
       <span>
-        <strong>¡Cuenta creada exitosamente!</strong> Inicia sesión con tus credenciales.
+        <strong>¡Cuenta creada exitosamente!</strong>
+        {' '}
+        Inicia sesión con tus credenciales.
       </span>
     </motion.div>
   )
@@ -31,11 +34,7 @@ function RegistrationSuccessBanner() {
 export function LoginPage() {
   const router = useRouter()
   const { isAuthenticated, isLoading } = useAuth0()
-  const [hasLegacySession, setHasLegacySession] = useState(false)
-
-  useEffect(() => {
-    setHasLegacySession(authService.isAuthenticated())
-  }, [])
+  const [hasLegacySession] = useState(() => authService.isAuthenticated())
 
   useEffect(() => {
     if (hasLegacySession || (!isLoading && isAuthenticated)) {

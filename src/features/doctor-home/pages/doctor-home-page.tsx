@@ -2,13 +2,16 @@
 
 import type { ConsultationPriority, QueueItem } from '@/features/doctor-queue/services/consultation-service'
 import { useAuth0 } from '@auth0/auth0-react'
-import { AlertTriangle, Brain, ChevronDown, ChevronRight, Clock, PauseCircle, Sparkles, Stethoscope, Timer } from 'lucide-react'
+import { AlertTriangle, Brain, ChevronDown, ChevronRight, Clock, LogOut, PauseCircle, Sparkles, Stethoscope, Timer } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { NotificationBell } from '@/components/notification-bell'
+import { authService } from '@/services/auth-service'
 import { useAssignConsultation } from '@/features/doctor-queue/hooks/use-assign-consultation'
 import { useConsultationDetail } from '@/features/doctor-queue/hooks/use-consultation-detail'
 import { useConsultationQueue } from '@/features/doctor-queue/hooks/use-consultation-queue'
 import { useDoctorAvailability } from '@/features/doctor-queue/hooks/use-doctor-availability'
+import { translateSpecialty } from '@/utils/specialty-labels'
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -35,11 +38,6 @@ function waitUrgency(dateStr: string | null): 'high' | 'medium' | 'low' {
   if (mins > 20)
     return 'medium'
   return 'low'
-}
-
-const SPECIALTY_LABELS: Record<string, string> = {
-  GENERAL_MEDICINE: 'Medicina General',
-  ODONTOLOGY: 'Odontología',
 }
 
 // ─── Priority config ────────────────────────────────────────────────────────
@@ -179,7 +177,7 @@ function ConsultationCard({
               {cfg.label}
             </span>
             <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
-              {SPECIALTY_LABELS[item.specialty] ?? item.specialty}
+              {translateSpecialty(item.specialty)}
             </span>
             <span className="ml-auto text-xs font-bold text-slate-400">
               #
@@ -325,8 +323,10 @@ export function DoctorHomePage() {
   }
 
   const doctorName = user?.name?.split(' ')[0] ?? 'Doctor'
-  const hour = new Date().getHours()
-  const greeting = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches'
+  const [greeting] = useState(() => {
+    const hour = new Date().getHours()
+    return hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches'
+  })
 
   return (
     <div className="min-h-screen bg-[#f5fbfb]">
@@ -346,6 +346,7 @@ export function DoctorHomePage() {
             </h1>
           </div>
           <div className="flex items-center gap-3">
+            <NotificationBell />
             <a
               href="/doctor/history"
               className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-teal-300 hover:text-teal-600 transition-colors"
@@ -375,6 +376,15 @@ export function DoctorHomePage() {
                     En pausa
                   </>
                 )}
+            </button>
+            <div className="h-5 w-px bg-slate-200" />
+            <button
+              type="button"
+              onClick={() => void authService.logout()}
+              title="Cerrar sesión"
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
+            >
+              <LogOut className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -412,7 +422,7 @@ export function DoctorHomePage() {
                   : 'border-slate-200 bg-white text-slate-600 hover:border-teal-300'
               }`}
             >
-              {sp === '' ? 'Todas las especialidades' : SPECIALTY_LABELS[sp]}
+              {sp === '' ? 'Todas las especialidades' : translateSpecialty(sp)}
             </button>
           ))}
           <div className="mx-1 h-4 w-px bg-slate-200" />

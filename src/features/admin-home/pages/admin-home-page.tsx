@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Clock,
   Info,
+  LogOut,
   ShieldCheck,
   Stethoscope,
   Timer,
@@ -14,7 +15,10 @@ import {
   Zap,
 } from 'lucide-react'
 import Link from 'next/link'
+import { NotificationBell } from '@/components/notification-bell'
+import { authService } from '@/services/auth-service'
 import { useBusinessMetrics, useConsultationMetrics, useDashboardAlerts, useTechnicalMetrics } from '@/features/admin-home/hooks/use-dashboard-metrics'
+import { translateSpecialty } from '@/utils/specialty-labels'
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -169,17 +173,25 @@ function AlertRow({
   )
 }
 
-function QuickActionBtn({ href, icon: Icon, label }: { href: string, icon: React.ElementType, label: string }) {
-  return (
-    <Link href={href}>
-      <div className="group flex flex-col items-center gap-2 rounded-2xl bg-teal-50 px-5 py-4 transition-all hover:bg-teal-100 hover:shadow-[0_4px_16px_rgba(20,184,166,0.12)]">
-        <div className="rounded-xl bg-white p-2.5 shadow-sm transition-transform group-hover:scale-105">
-          <Icon className="h-5 w-5 text-teal-600" />
-        </div>
-        <span className="text-xs font-bold text-teal-800">{label}</span>
+function QuickActionBtn({ href, icon: Icon, label, external }: { href: string, icon: React.ElementType, label: string, external?: boolean }) {
+  const inner = (
+    <div className="group flex flex-col items-center gap-2 rounded-2xl bg-teal-50 px-5 py-4 transition-all hover:bg-teal-100 hover:shadow-[0_4px_16px_rgba(20,184,166,0.12)]">
+      <div className="rounded-xl bg-white p-2.5 shadow-sm transition-transform group-hover:scale-105">
+        <Icon className="h-5 w-5 text-teal-600" />
       </div>
-    </Link>
+      <span className="text-xs font-bold text-teal-800">{label}</span>
+    </div>
   )
+
+  if (external) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer">
+        {inner}
+      </a>
+    )
+  }
+
+  return <Link href={href}>{inner}</Link>
 }
 
 // ─── Doctor status mini list ───────────────────────────────────────────────
@@ -246,11 +258,6 @@ const GROWTH_METRICS: ReadonlyArray<{
     colorClass: 'from-cyan-400 to-cyan-500',
   },
 ]
-
-const SPECIALTY_LABELS: Record<string, string> = {
-  GENERAL_MEDICINE: 'Medicina General',
-  ODONTOLOGY: 'Odontología',
-}
 
 export function AdminHomePage() {
   const { data: biz, isLoading: bizLoading, isError: bizError } = useBusinessMetrics()
@@ -319,7 +326,19 @@ export function AdminHomePage() {
               Vista ejecutiva del sistema en tiempo real
             </p>
           </div>
-          <SystemHealthBadge degraded={tech?.degraded ?? false} loading={techLoading} />
+          <div className="flex items-center gap-3">
+            <NotificationBell />
+            <SystemHealthBadge degraded={tech?.degraded ?? false} loading={techLoading} />
+            <div className="h-5 w-px bg-slate-200" />
+            <button
+              type="button"
+              onClick={() => void authService.logout()}
+              title="Cerrar sesión"
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -621,7 +640,7 @@ export function AdminHomePage() {
                     return (
                       <div key={row.specialty} className="mb-3">
                         <div className="mb-1 flex items-center justify-between">
-                          <span className="text-xs font-semibold text-slate-600">{SPECIALTY_LABELS[row.specialty] ?? row.specialty}</span>
+                          <span className="text-xs font-semibold text-slate-600">{translateSpecialty(row.specialty)}</span>
                           <span className="text-xs text-slate-400">
                             {row.closed}
                             /
@@ -666,7 +685,7 @@ export function AdminHomePage() {
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-slate-800">{doc.name}</p>
                         {doc.specialty && (
-                          <p className="text-xs text-slate-400">{SPECIALTY_LABELS[doc.specialty] ?? doc.specialty}</p>
+                          <p className="text-xs text-slate-400">{translateSpecialty(doc.specialty)}</p>
                         )}
                       </div>
                       <span className="text-sm font-black text-teal-600">{doc.closed}</span>
@@ -684,7 +703,7 @@ export function AdminHomePage() {
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <QuickActionBtn href="/doctor/queue" icon={Activity} label="Cola de consultas" />
             <QuickActionBtn href="/admin/doctors" icon={Users} label="Doctores" />
-            <QuickActionBtn href="/v1/docs" icon={TrendingUp} label="API Docs" />
+            <QuickActionBtn href={`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/docs`} icon={TrendingUp} label="API Docs" external />
             <QuickActionBtn href="/admin/users" icon={ShieldCheck} label="Usuarios" />
           </div>
         </section>

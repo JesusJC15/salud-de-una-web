@@ -181,6 +181,16 @@ export const authService = {
   },
 
   async logout(): Promise<void> {
+    // Revoke refresh token on backend (best effort — does not block UI logout)
+    const refreshToken = ssGet(SS_REFRESH)
+    if (refreshToken) {
+      fetch(`${getApiBaseUrl()}/v1/auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      }).catch(() => {})
+    }
+
     ssClear()
     await syncServerSessionCookie(null)
     _isAuthenticated = false

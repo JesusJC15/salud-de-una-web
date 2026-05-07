@@ -125,7 +125,7 @@ describe('apiClient', () => {
       data: { email: 'ana@saluddeuna.com' },
       correlationId: 'client-cid',
       headers: {
-        Accept: 'text/plain',
+        'Accept': 'text/plain',
         'x-correlation-id': 'header-cid',
       },
       requiresAuth: false,

@@ -6,11 +6,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { PriorityBadge } from '@/features/doctor-queue/components/priority-badge'
 import { useDoctorHistory } from '@/features/doctor-queue/hooks/use-doctor-history'
-
-const SPECIALTY_LABELS: Record<string, string> = {
-  GENERAL_MEDICINE: 'Medicina General',
-  ODONTOLOGY: 'Odontología',
-}
+import { translateSpecialty } from '@/utils/specialty-labels'
 
 const STATUS_CONFIG: Record<ConsultationStatus, { label: string, className: string }> = {
   PENDING: { label: 'Pendiente', className: 'bg-slate-100 text-slate-600' },
@@ -120,7 +116,7 @@ export function DoctorHistoryPage() {
                   return (
                     <tr key={item.id} className="group hover:bg-slate-50/60 transition-colors">
                       <td className="px-4 py-3 font-medium text-slate-800">
-                        {SPECIALTY_LABELS[item.specialty] ?? item.specialty}
+                        {translateSpecialty(item.specialty)}
                       </td>
                       <td className="px-4 py-3">
                         <PriorityBadge priority={item.priority} />

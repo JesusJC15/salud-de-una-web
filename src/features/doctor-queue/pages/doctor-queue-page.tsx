@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { PriorityBadge } from '@/features/doctor-queue/components/priority-badge'
 import { useAssignConsultation } from '@/features/doctor-queue/hooks/use-assign-consultation'
 import { useConsultationQueue } from '@/features/doctor-queue/hooks/use-consultation-queue'
+import { translateSpecialty } from '@/utils/specialty-labels'
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime()
@@ -16,11 +17,6 @@ function timeAgo(dateStr: string): string {
   if (hrs < 24)
     return `hace ${hrs}h`
   return `hace ${Math.floor(hrs / 24)}d`
-}
-
-const SPECIALTY_LABELS: Record<string, string> = {
-  GENERAL_MEDICINE: 'Medicina General',
-  ODONTOLOGY: 'Odontología',
 }
 
 export function DoctorQueuePage() {
@@ -95,7 +91,7 @@ export function DoctorQueuePage() {
                       <PriorityBadge priority={item.priority} />
                     </td>
                     <td className="px-4 py-3 font-medium text-slate-900">
-                      {SPECIALTY_LABELS[item.specialty] ?? item.specialty}
+                      {translateSpecialty(item.specialty)}
                     </td>
                     <td className="px-4 py-3 text-slate-500">{item.status}</td>
                     <td className="px-4 py-3 text-slate-500">
