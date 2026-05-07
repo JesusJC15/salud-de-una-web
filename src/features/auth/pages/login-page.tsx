@@ -1,9 +1,9 @@
 'use client'
 
 import { useAuth0 } from '@auth0/auth0-react'
-import { ShieldPlus, Sparkles, UserPlus } from 'lucide-react'
+import { CheckCircle, ShieldPlus, Sparkles, UserPlus } from 'lucide-react'
 import { motion } from 'motion/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { cardPopIn, floatingTransition, pageReveal, staggerItem, staggerParent } from '@/components/animations/motion-presets'
 import LoginForm from '@/features/auth/components/login-form'
@@ -11,6 +11,8 @@ import { authService } from '@/services/auth-service'
 
 export function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const justRegistered = searchParams.get('registered') === '1'
   const { isAuthenticated, isLoading } = useAuth0()
   const [hasLegacySession, setHasLegacySession] = useState(false)
 
@@ -96,6 +98,20 @@ export function LoginPage() {
               Inicie sesion para gestionar la atencion clinica
             </p>
           </motion.div>
+
+          {justRegistered && (
+            <motion.div
+              className="mt-8 flex items-center gap-3 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-800"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <CheckCircle className="h-5 w-5 shrink-0 text-teal-600" />
+              <span>
+                <strong>¡Cuenta creada exitosamente!</strong> Inicia sesión con tus credenciales.
+              </span>
+            </motion.div>
+          )}
 
           <motion.div className="mt-10" variants={staggerItem}>
             <LoginForm />
