@@ -1,10 +1,16 @@
 import { env } from 'node:process'
 
-const TRAILING_SLASHES_PATTERN = /\/+$/g
 const API_PREFIX = '/v1'
 
+function trimTrailingSlashes(url) {
+  let end = String(url || '').length
+  const str = String(url || '')
+  while (end > 0 && str[end - 1] === '/') end--
+  return end === str.length ? str : str.slice(0, end)
+}
+
 function normalizeBaseUrl(value) {
-  return String(value || '').replace(TRAILING_SLASHES_PATTERN, '')
+  return trimTrailingSlashes(value)
 }
 
 const backendOrigin = normalizeBaseUrl(

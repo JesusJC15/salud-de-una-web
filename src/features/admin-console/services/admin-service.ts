@@ -1,7 +1,6 @@
 import type { ListDoctorsForReviewResponse } from '@/types/admin'
+import { trimTrailingSlashes } from '@/lib/utils'
 import { apiClient } from '@/api/api-client'
-
-const TRIM_TRAILING_SLASHES = /\/+$/
 
 export interface AdminUserListItem {
   id: string
@@ -56,7 +55,7 @@ export const adminService = {
 
   async exportConsultationsCsv(params: { from?: string, to?: string, specialty?: string, priority?: string } = {}) {
     const res = await fetch(
-      `${(process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000/v1').replace(TRIM_TRAILING_SLASHES, '')}/admin/reports/consultations.csv?${new URLSearchParams(
+      `${trimTrailingSlashes(process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000/v1')}/admin/reports/consultations.csv?${new URLSearchParams(
         Object.entries(params).reduce<Record<string, string>>((acc, [key, value]) => {
           if (value)
             acc[key] = value

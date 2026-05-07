@@ -1,3 +1,4 @@
+import { trimLeadingSlashes, trimTrailingSlashes } from '@/lib/utils'
 import { authService } from '@/services/auth-service'
 import envConfig from '@/utils/config/envConfig'
 
@@ -53,19 +54,15 @@ export class ApiClientError extends Error {
   }
 }
 
-const TRAILING_SLASHES_PATTERN = /\/+$/g
-const LEADING_SLASHES_PATTERN = /^\/+/
 const DEFAULT_TIMEOUT_MS = 15_000
 const CORRELATION_HEADER = 'x-correlation-id'
 
 function normalizeSegment(value: string) {
-  return value
-    .replace(LEADING_SLASHES_PATTERN, '')
-    .replace(TRAILING_SLASHES_PATTERN, '')
+  return trimTrailingSlashes(trimLeadingSlashes(value))
 }
 
 function normalizeBaseUrl(value: string) {
-  return value.replace(TRAILING_SLASHES_PATTERN, '')
+  return trimTrailingSlashes(value)
 }
 
 function buildUrl(basePath: string, endpoint = '', params?: Record<string, PrimitiveQueryValue>) {

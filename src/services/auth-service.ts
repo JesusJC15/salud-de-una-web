@@ -1,4 +1,5 @@
 import type { AuthMeResponseDto, AuthMeUser } from '@/types/auth'
+import { trimTrailingSlashes } from '@/lib/utils'
 
 type GetTokenFn = () => Promise<string>
 type LogoutFn = (options: { logoutParams: { returnTo: string } }) => void
@@ -10,7 +11,6 @@ let _lastSyncedAccessToken: string | null = null
 
 const SS_ACCESS = 'salud-de-una.legacy.access'
 const SS_REFRESH = 'salud-de-una.legacy.refresh'
-const TRAILING_SLASH = /\/+$/
 const SESSION_ENDPOINT = '/api/session'
 
 function ssGet(key: string): string | null {
@@ -32,7 +32,7 @@ function ssClear(): void {
 }
 
 function getApiBaseUrl() {
-  return (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000').replace(TRAILING_SLASH, '')
+  return trimTrailingSlashes(process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000')
 }
 
 async function syncServerSessionCookie(token: string | null): Promise<void> {

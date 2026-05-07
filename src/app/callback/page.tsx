@@ -3,11 +3,10 @@
 import { useAuth0 } from '@auth0/auth0-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { trimTrailingSlashes } from '@/lib/utils'
 import { authService } from '@/services/auth-service'
 
 type ProvisionState = 'loading' | 'error'
-
-const TRAILING_SLASH = /\/+$/
 
 export default function CallbackPage() {
   const { isLoading, isAuthenticated, error, getAccessTokenSilently } = useAuth0()
@@ -33,7 +32,7 @@ export default function CallbackPage() {
 
       try {
         const audience = process.env.NEXT_PUBLIC_AUTH0_AUDIENCE
-        const baseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000').replace(TRAILING_SLASH, '')
+        const baseUrl = trimTrailingSlashes(process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000')
 
         const token = await getAccessTokenSilently({ authorizationParams: { audience } })
         const pendingProvision = sessionStorage.getItem('salud-de-una.pending-provision')
