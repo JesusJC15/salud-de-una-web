@@ -99,3 +99,23 @@ export interface VerifyDoctorResponseDto {
     notes?: string
   }
 }
+
+export interface AiPromptItem {
+  _id: string
+  key: string
+  version: number
+  provider: string
+  model: string
+  active: boolean
+  systemInstruction: string
+  metadata?: Record<string, unknown>
+  createdAt?: IsoDateString | null
+  updatedAt?: IsoDateString | null
+}
+
+export interface ListPromptsResponse {
+  items: AiPromptItem[]
+  total: number
+  page: number
+  limit: number
+}

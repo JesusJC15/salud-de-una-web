@@ -1,4 +1,4 @@
-import type { ListDoctorsForReviewResponse } from '@/types/admin'
+import type { AiPromptItem, ListDoctorsForReviewResponse, ListPromptsResponse } from '@/types/admin'
 import { apiClient } from '@/api/api-client'
 import envConfig from '@/utils/config/envConfig'
 
@@ -70,5 +70,25 @@ export const adminService = {
     )
 
     return res.text()
+  },
+
+  async listAiPrompts(params: { page?: number; limit?: number } = {}) {
+    const res = await apiClient('').get<ListPromptsResponse>('admin/ai/prompts', { params })
+    return res.data
+  },
+
+  async getAiPromptVersions(key: string) {
+    const res = await apiClient('').get<AiPromptItem[]>(`admin/ai/prompts/${encodeURIComponent(key)}`)
+    return res.data
+  },
+
+  async createAiPromptVersion(dto: { key: string; systemInstruction: string; model?: string }) {
+    const res = await apiClient('').post<AiPromptItem>('admin/ai/prompts', dto)
+    return res.data
+  },
+
+  async toggleAiPromptActive(id: string, active: boolean) {
+    const res = await apiClient('').patch<AiPromptItem>(`admin/ai/prompts/${id}/toggle`, { active })
+    return res.data
   },
 }
