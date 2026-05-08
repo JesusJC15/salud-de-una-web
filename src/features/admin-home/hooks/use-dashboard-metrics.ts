@@ -116,3 +116,71 @@ export function useDashboardAlerts() {
     staleTime: 20_000,
   })
 }
+
+export interface ReadinessStatus {
+  status: string
+  mongodb?: string
+  redis?: string
+  ai?: string
+  [key: string]: string | undefined
+}
+
+export function useSystemHealth() {
+  return useQuery<ReadinessStatus>({
+    queryKey: ['admin', 'system-health'],
+    queryFn: async () => {
+      const res = await apiClient('').get<ReadinessStatus>('ready')
+      return res.data
+    },
+    retry: 1,
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  })
+}
+
+export interface ErrorLogEntry {
+  id: string
+  timestamp: string
+  statusCode: number
+  method: string
+  url: string
+  correlationId?: string
+  userId?: string
+  errorMessage: string
+}
+
+export function useRecentErrors() {
+  return useQuery<ErrorLogEntry[]>({
+    queryKey: ['admin', 'recent-errors'],
+    queryFn: async () => {
+      const res = await apiClient('').get<ErrorLogEntry[]>('dashboard/errors', { params: { limit: 10 } })
+      return res.data
+    },
+    retry: 1,
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  })
+}
+
+export interface AiUsageMetrics {
+  windowHours: number
+  total: number
+  successCount: number
+  errorCount: number
+  successRate: number
+  avgLatencyMs: number
+  byPromptKey: Record<string, number>
+}
+
+export function useAiMetrics() {
+  return useQuery<AiUsageMetrics>({
+    queryKey: ['admin', 'ai-metrics'],
+    queryFn: async () => {
+      const res = await apiClient('').get<AiUsageMetrics>('dashboard/ai-metrics')
+      return res.data
+    },
+    retry: 1,
+    refetchInterval: 60_000,
+    staleTime: 45_000,
+  })
+}

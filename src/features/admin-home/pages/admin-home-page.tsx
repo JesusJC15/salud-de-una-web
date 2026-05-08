@@ -17,7 +17,7 @@ import {
 import Link from 'next/link'
 import { NotificationBell } from '@/components/notification-bell'
 import { authService } from '@/services/auth-service'
-import { useBusinessMetrics, useConsultationMetrics, useDashboardAlerts, useTechnicalMetrics } from '@/features/admin-home/hooks/use-dashboard-metrics'
+import { useAiMetrics, useBusinessMetrics, useConsultationMetrics, useDashboardAlerts, useRecentErrors, useSystemHealth, useTechnicalMetrics } from '@/features/admin-home/hooks/use-dashboard-metrics'
 import { translateSpecialty } from '@/utils/specialty-labels'
 
 // ─── helpers ───────────────────────────────────────────────────────────────
@@ -264,6 +264,9 @@ export function AdminHomePage() {
   const { data: tech, isLoading: techLoading, isError: techError } = useTechnicalMetrics()
   const { data: consult, isLoading: consultLoading } = useConsultationMetrics()
   const { data: alertsData } = useDashboardAlerts()
+  const { data: health } = useSystemHealth()
+  const { data: recentErrors } = useRecentErrors()
+  const { data: aiMetrics } = useAiMetrics()
 
   // Derive alerts from metrics
   const alerts: { level: 'critical' | 'warning' | 'info', message: string }[] = []
@@ -692,6 +695,79 @@ export function AdminHomePage() {
                     </div>
                   ))}
             </div>
+          </div>
+        </section>
+
+        {/* ── Sistema / Observabilidad ── */}
+        <section>
+          <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-slate-400">
+            Sistema
+          </h2>
+
+          {/* Health badges */}
+          <div className="mb-4 grid grid-cols-3 gap-3">
+            {(['mongodb', 'redis', 'ai'] as const).map((key) => {
+              const value = health?.[key]
+              const ok = value === 'connected' || value === 'up' || value === 'healthy'
+              return (
+                <div key={key} className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 ${ok ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50'}`}>
+                  <span className={`h-2 w-2 rounded-full ${ok ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                  <span className={`text-xs font-bold uppercase ${ok ? 'text-emerald-700' : 'text-red-700'}`}>
+                    {key === 'mongodb' ? 'MongoDB' : key === 'redis' ? 'Redis' : 'IA (Gemini)'}
+                  </span>
+                  <span className={`ml-auto text-[11px] ${ok ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {value ?? '—'}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* AI metrics */}
+          {aiMetrics && (
+            <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                { label: 'Llamadas IA (24h)', value: String(aiMetrics.total) },
+                { label: 'Tasa éxito', value: `${aiMetrics.successRate}%` },
+                { label: 'Errores', value: String(aiMetrics.errorCount) },
+                { label: 'Latencia prom.', value: `${aiMetrics.avgLatencyMs} ms` },
+              ].map(m => (
+                <div key={m.label} className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                  <p className="text-lg font-black text-slate-900">{m.value}</p>
+                  <p className="text-xs text-slate-500">{m.label}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Recent errors */}
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+              <p className="text-sm font-bold text-slate-800">Errores recientes (5xx)</p>
+              {recentErrors && recentErrors.length > 0 && (
+                <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">{recentErrors.length}</span>
+              )}
+            </div>
+            {!recentErrors || recentErrors.length === 0
+              ? (
+                  <p className="px-4 py-6 text-center text-sm text-slate-400">Sin errores recientes</p>
+                )
+              : (
+                  <div className="divide-y divide-slate-100">
+                    {recentErrors.slice(0, 5).map(err => (
+                      <div key={err.id} className="flex items-start gap-3 px-4 py-2.5">
+                        <span className="mt-0.5 rounded bg-red-100 px-1.5 py-0.5 text-[11px] font-bold text-red-700">{err.statusCode}</span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-medium text-slate-700">{err.method} {err.url}</p>
+                          <p className="truncate text-[11px] text-slate-400">{err.errorMessage}</p>
+                        </div>
+                        <span className="shrink-0 text-[11px] text-slate-400">
+                          {new Date(err.timestamp).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
           </div>
         </section>
 
