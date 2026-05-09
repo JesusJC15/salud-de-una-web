@@ -16,8 +16,8 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { NotificationBell } from '@/components/notification-bell'
-import { authService } from '@/services/auth-service'
 import { useAiMetrics, useBusinessMetrics, useConsultationMetrics, useDashboardAlerts, useRecentErrors, useSystemHealth, useTechnicalMetrics } from '@/features/admin-home/hooks/use-dashboard-metrics'
+import { authService } from '@/services/auth-service'
 import { translateSpecialty } from '@/utils/specialty-labels'
 
 // ─── helpers ───────────────────────────────────────────────────────────────
@@ -496,6 +496,7 @@ export function AdminHomePage() {
               <div className="space-y-3">
                 {(bizLoading || techLoading)
                   ? Array.from({ length: 3 }).map((_, i) => (
+                    // eslint-disable-next-line react/no-array-index-key
                     <div key={i} className="h-12 animate-pulse rounded-xl bg-slate-50" />
                   ))
                   : [
@@ -509,8 +510,8 @@ export function AdminHomePage() {
                               : 'warning' as const,
                         message: alert.message,
                       })),
-                  ].map((a, i) => (
-                    <AlertRow key={i} level={a.level} message={a.message} />
+                  ].map(a => (
+                    <AlertRow key={a.message} level={a.level} message={a.message} />
                   ))}
               </div>
             </div>
@@ -526,6 +527,7 @@ export function AdminHomePage() {
                 ? (
                   <div className="space-y-3">
                     {Array.from({ length: 3 }).map((_, i) => (
+                      // eslint-disable-next-line react/no-array-index-key
                       <div key={i} className="h-10 animate-pulse rounded-xl bg-slate-50" />
                     ))}
                   </div>
@@ -706,7 +708,11 @@ export function AdminHomePage() {
 
           {/* Health badges */}
           <div className="mb-4 grid grid-cols-3 gap-3">
-            {(['mongodb', 'redis', 'ai'] as const).map((key) => {
+            {([
+              'mongodb',
+              'redis',
+              'ai',
+            ] as const).map((key) => {
               const value = health?.[key]
               const ok = value === 'connected' || value === 'up' || value === 'healthy'
               return (
@@ -750,24 +756,28 @@ export function AdminHomePage() {
             </div>
             {!recentErrors || recentErrors.length === 0
               ? (
-                  <p className="px-4 py-6 text-center text-sm text-slate-400">Sin errores recientes</p>
-                )
+                <p className="px-4 py-6 text-center text-sm text-slate-400">Sin errores recientes</p>
+              )
               : (
-                  <div className="divide-y divide-slate-100">
-                    {recentErrors.slice(0, 5).map(err => (
-                      <div key={err.id} className="flex items-start gap-3 px-4 py-2.5">
-                        <span className="mt-0.5 rounded bg-red-100 px-1.5 py-0.5 text-[11px] font-bold text-red-700">{err.statusCode}</span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-xs font-medium text-slate-700">{err.method} {err.url}</p>
-                          <p className="truncate text-[11px] text-slate-400">{err.errorMessage}</p>
-                        </div>
-                        <span className="shrink-0 text-[11px] text-slate-400">
-                          {new Date(err.timestamp).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                <div className="divide-y divide-slate-100">
+                  {recentErrors.slice(0, 5).map(err => (
+                    <div key={err.id} className="flex items-start gap-3 px-4 py-2.5">
+                      <span className="mt-0.5 rounded bg-red-100 px-1.5 py-0.5 text-[11px] font-bold text-red-700">{err.statusCode}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-medium text-slate-700">
+                          {err.method}
+                          {' '}
+                          {err.url}
+                        </p>
+                        <p className="truncate text-[11px] text-slate-400">{err.errorMessage}</p>
                       </div>
-                    ))}
-                  </div>
-                )}
+                      <span className="shrink-0 text-[11px] text-slate-400">
+                        {new Date(err.timestamp).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
           </div>
         </section>
 

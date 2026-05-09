@@ -62,7 +62,7 @@ export default function CallbackPage() {
         }
 
         // ── Try to get the current user ───────────────────────────────────────
-        let currentUser = await authService.getCurrentUser(token)
+        const currentUser = await authService.getCurrentUser(token)
 
         // ── Auto-provision: Auth0 account not yet linked to MongoDB ───────────
         // Happens when the user registered with email/password and this is
@@ -126,7 +126,13 @@ export default function CallbackPage() {
     }
 
     void handleCallback()
-  }, [isLoading, isAuthenticated, error, getAccessTokenSilently, router])
+  }, [
+    isLoading,
+    isAuthenticated,
+    error,
+    getAccessTokenSilently,
+    router,
+  ])
 
   if (state === 'error') {
     return (

@@ -7,11 +7,11 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { NotificationBell } from '@/components/notification-bell'
-import { authService } from '@/services/auth-service'
 import { useAssignConsultation } from '@/features/doctor-queue/hooks/use-assign-consultation'
 import { useConsultationDetail } from '@/features/doctor-queue/hooks/use-consultation-detail'
 import { useConsultationQueue } from '@/features/doctor-queue/hooks/use-consultation-queue'
 import { useDoctorAvailability } from '@/features/doctor-queue/hooks/use-doctor-availability'
+import { authService } from '@/services/auth-service'
 import { translateSpecialty } from '@/utils/specialty-labels'
 
 // ─── helpers ───────────────────────────────────────────────────────────────
@@ -93,6 +93,7 @@ function AiSummaryDrawer({ consultationId }: { consultationId: string }) {
     return (
       <div className="mt-3 space-y-2 rounded-xl bg-white/80 p-4">
         {Array.from({ length: 3 }).map((_, i) => (
+          // eslint-disable-next-line react/no-array-index-key
           <div key={i} className="h-3 animate-pulse rounded bg-slate-100" style={{ width: `${85 - i * 15}%` }} />
         ))}
       </div>
@@ -122,8 +123,8 @@ function AiSummaryDrawer({ consultationId }: { consultationId: string }) {
       {/* Red Flags */}
       {analysis?.redFlags && analysis.redFlags.length > 0 && (
         <div className="space-y-1">
-          {analysis.redFlags.map((rf, i) => (
-            <div key={i} className="flex items-start gap-2">
+          {analysis.redFlags.map(rf => (
+            <div key={rf.evidence} className="flex items-start gap-2">
               <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-red-500" />
               <p className="text-xs font-semibold text-red-700">{rf.evidence}</p>
             </div>
@@ -452,6 +453,7 @@ export function DoctorHomePage() {
           ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {Array.from({ length: 4 }).map((_, i) => (
+                // eslint-disable-next-line react/no-array-index-key
                 <div key={i} className="h-16 animate-pulse rounded-2xl bg-white" />
               ))}
             </div>

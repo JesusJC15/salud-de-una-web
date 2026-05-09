@@ -104,6 +104,7 @@ export function AdminUsersPage() {
           ? (
             <div className="divide-y divide-slate-50">
               {Array.from({ length: 6 }).map((_, i) => (
+                // eslint-disable-next-line react/no-array-index-key
                 <div key={i} className="flex items-center gap-4 px-4 py-3">
                   <div className="h-4 w-40 animate-pulse rounded bg-slate-100" />
                   <div className="h-4 w-48 animate-pulse rounded bg-slate-100" />

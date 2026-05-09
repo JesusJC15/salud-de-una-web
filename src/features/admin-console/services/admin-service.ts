@@ -72,7 +72,7 @@ export const adminService = {
     return res.text()
   },
 
-  async listAiPrompts(params: { page?: number; limit?: number } = {}) {
+  async listAiPrompts(params: { page?: number, limit?: number } = {}) {
     const res = await apiClient('').get<ListPromptsResponse>('admin/ai/prompts', { params })
     return res.data
   },
@@ -82,7 +82,7 @@ export const adminService = {
     return res.data
   },
 
-  async createAiPromptVersion(dto: { key: string; systemInstruction: string; model?: string }) {
+  async createAiPromptVersion(dto: { key: string, systemInstruction: string, model?: string }) {
     const res = await apiClient('').post<AiPromptItem>('admin/ai/prompts', dto)
     return res.data
   },

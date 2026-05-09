@@ -1,10 +1,10 @@
 'use client'
 
-import type { NotificationListItem, NotificationsResponseDto } from '@/types/notification'
-import { useEffect, useRef } from 'react'
 import type { Socket } from 'socket.io-client'
-import { io } from 'socket.io-client'
+import type { NotificationListItem, NotificationsResponseDto } from '@/types/notification'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useRef } from 'react'
+import { io } from 'socket.io-client'
 import { apiClient } from '@/api/api-client'
 import { trimTrailingSlashes } from '@/lib/utils'
 import { authService } from '@/services/auth-service'
@@ -34,7 +34,8 @@ export function useNotifications() {
 
     async function connect() {
       const token = await authService.getAccessToken()
-      if (!token || !mounted) return
+      if (!token || !mounted)
+        return
 
       const socket = io(`${WS_BASE_URL}/notifications`, {
         auth: { token },
@@ -47,9 +48,11 @@ export function useNotifications() {
       socketRef.current = socket
 
       socket.on('notification:new', (notification: NotificationListItem) => {
-        if (!mounted) return
+        if (!mounted)
+          return
         queryClient.setQueryData<NotificationsResponseDto>(['notifications'], (old) => {
-          if (!old) return old
+          if (!old)
+            return old
           return {
             items: [notification, ...old.items].slice(0, 20),
             unreadCount: old.unreadCount + 1,

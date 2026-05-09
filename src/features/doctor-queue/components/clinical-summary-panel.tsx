@@ -48,8 +48,8 @@ export function ClinicalSummaryPanel({
               ? (
                 <div>
                   <p className="mb-1 text-xs text-red-600 font-semibold">Señales de alarma:</p>
-                  {triage.analysis.redFlags.map((rf, i) => (
-                    <p key={i} className="text-xs text-red-700">
+                  {triage.analysis.redFlags.map(rf => (
+                    <p key={rf.evidence} className="text-xs text-red-700">
                       •
                       {rf.evidence}
                     </p>
@@ -67,8 +67,8 @@ export function ClinicalSummaryPanel({
                   )
                 </summary>
                 <div className="mt-2 space-y-2">
-                  {triage.answers.map((a, i) => (
-                    <div key={i} className="rounded-lg bg-slate-50 p-2">
+                  {triage.answers.map(a => (
+                    <div key={a.questionText} className="rounded-lg bg-slate-50 p-2">
                       <p className="text-xs text-slate-500">{a.questionText}</p>
                       <p className="text-xs font-semibold text-slate-900">{String(a.answerValue)}</p>
                     </div>

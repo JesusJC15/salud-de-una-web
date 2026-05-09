@@ -17,7 +17,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     if (!isAuthenticated && !authService.isAuthenticated()) {
       void router.replace('/login')
     }
-  }, [isLoading, isAuthenticated, router])
+  }, [
+    isLoading,
+    isAuthenticated,
+    router,
+  ])
 
   if (isLoading) {
     return (

@@ -48,7 +48,7 @@ export default function DoctorLayout({ children }: { children: ReactNode }) {
     }
 
     void checkRole()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react/exhaustive-deps
   }, [isLoading, isAuthenticated])
 
   if (isLoading || !roleChecked) {
