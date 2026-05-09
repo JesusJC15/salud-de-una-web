@@ -119,3 +119,46 @@ export interface ListPromptsResponse {
   page: number
   limit: number
 }
+
+export interface BillingPrice {
+  _id?: string
+  specialty: string
+  amount: number
+  currency: string
+  active: boolean
+  updatedAt?: IsoDateString | null
+}
+
+export type TransactionStatus = 'PENDING' | 'COMPLETED' | 'REFUNDED'
+
+export interface BillingTransaction {
+  _id: string
+  patientId: string
+  consultationId: string
+  specialty: string
+  amount: number
+  currency: string
+  status: TransactionStatus
+  paidAt?: IsoDateString | null
+  createdAt?: IsoDateString | null
+}
+
+export interface ListTransactionsResponse {
+  items: BillingTransaction[]
+  total: number
+  page: number
+  limit: number
+}
+
+export interface RevenueMetrics {
+  currentMonth: {
+    totalRevenue: number
+    paidConsultations: number
+    currency: string
+  }
+  bySpecialty: Array<{
+    specialty: string
+    totalRevenue: number
+    count: number
+  }>
+}

@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { NotificationBell } from '@/components/notification-bell'
-import { useAiMetrics, useBusinessMetrics, useConsultationMetrics, useDashboardAlerts, useRecentErrors, useSystemHealth, useTechnicalMetrics } from '@/features/admin-home/hooks/use-dashboard-metrics'
+import { useAiMetrics, useBusinessMetrics, useConsultationMetrics, useDashboardAlerts, useRecentErrors, useRevenueMetrics, useSystemHealth, useTechnicalMetrics } from '@/features/admin-home/hooks/use-dashboard-metrics'
 import { authService } from '@/services/auth-service'
 import { translateSpecialty } from '@/utils/specialty-labels'
 
@@ -267,6 +267,7 @@ export function AdminHomePage() {
   const { data: health } = useSystemHealth()
   const { data: recentErrors } = useRecentErrors()
   const { data: aiMetrics } = useAiMetrics()
+  const { data: revenue } = useRevenueMetrics()
 
   // Derive alerts from metrics
   const alerts: { level: 'critical' | 'warning' | 'info', message: string }[] = []
@@ -729,6 +730,23 @@ export function AdminHomePage() {
             })}
           </div>
 
+          {/* Revenue KPI */}
+          {revenue && (
+            <div className="mb-4 grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                <p className="text-xl font-black text-emerald-900">
+                  $
+                  {revenue.currentMonth.totalRevenue.toLocaleString('es-CO')}
+                </p>
+                <p className="text-xs text-emerald-700">Ingresos del mes (COP)</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                <p className="text-xl font-black text-slate-900">{revenue.currentMonth.paidConsultations}</p>
+                <p className="text-xs text-slate-500">Consultas pagadas este mes</p>
+              </div>
+            </div>
+          )}
+
           {/* AI metrics */}
           {aiMetrics && (
             <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -791,6 +809,7 @@ export function AdminHomePage() {
             <QuickActionBtn href="/admin/doctors" icon={Users} label="Doctores" />
             <QuickActionBtn href="/admin/users" icon={ShieldCheck} label="Usuarios" />
             <QuickActionBtn href="/admin/ai/prompts" icon={Zap} label="Prompts IA" />
+            <QuickActionBtn href="/admin/billing" icon={TrendingUp} label="Facturación" />
           </div>
         </section>
 

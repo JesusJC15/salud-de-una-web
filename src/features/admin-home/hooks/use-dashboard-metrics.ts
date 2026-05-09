@@ -172,6 +172,19 @@ export interface AiUsageMetrics {
   byPromptKey: Record<string, number>
 }
 
+export function useRevenueMetrics() {
+  return useQuery({
+    queryKey: ['admin', 'revenue-metrics'],
+    queryFn: async () => {
+      const { adminService } = await import('@/features/admin-console/services/admin-service')
+      return adminService.getRevenueMetrics()
+    },
+    retry: 1,
+    refetchInterval: 60_000,
+    staleTime: 45_000,
+  })
+}
+
 export function useAiMetrics() {
   return useQuery<AiUsageMetrics>({
     queryKey: ['admin', 'ai-metrics'],

@@ -1,4 +1,11 @@
-import type { AiPromptItem, ListDoctorsForReviewResponse, ListPromptsResponse } from '@/types/admin'
+import type {
+  AiPromptItem,
+  BillingPrice,
+  ListDoctorsForReviewResponse,
+  ListPromptsResponse,
+  ListTransactionsResponse,
+  RevenueMetrics,
+} from '@/types/admin'
 import { apiClient } from '@/api/api-client'
 import envConfig from '@/utils/config/envConfig'
 
@@ -89,6 +96,33 @@ export const adminService = {
 
   async toggleAiPromptActive(id: string, active: boolean) {
     const res = await apiClient('').patch<AiPromptItem>(`admin/ai/prompts/${id}/toggle`, { active })
+    return res.data
+  },
+
+  async getBillingPrices() {
+    const res = await apiClient('').get<BillingPrice[]>('billing/prices')
+    return res.data
+  },
+
+  async updateBillingPrice(specialty: string, amount: number) {
+    const res = await apiClient('').patch<BillingPrice>(`billing/admin/prices/${specialty}`, { amount })
+    return res.data
+  },
+
+  async getAdminTransactions(params: {
+    from?: string
+    to?: string
+    specialty?: string
+    status?: string
+    page?: number
+    limit?: number
+  } = {}) {
+    const res = await apiClient('').get<ListTransactionsResponse>('billing/admin/transactions', { params })
+    return res.data
+  },
+
+  async getRevenueMetrics() {
+    const res = await apiClient('').get<RevenueMetrics>('billing/admin/revenue')
     return res.data
   },
 }
