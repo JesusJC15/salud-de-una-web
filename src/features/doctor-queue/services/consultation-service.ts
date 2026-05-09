@@ -16,6 +16,16 @@ export interface QueueItem {
 export interface ConsultationDetail extends QueueItem {
   assignedDoctorId?: string
   clinicalSummary?: string
+  clinicalSummaryTraceId?: string | null
+  clinicalSummaryCitations?: Array<{
+    chunkId: string
+    documentId: string
+    title: string
+    sectionPath: string | null
+    authority: string
+    snippet: string | null
+    score: number
+  }>
   closedAt?: string
   updatedAt?: string
   summaryFeedback?: {
@@ -102,7 +112,21 @@ export const consultationService = {
   },
 
   async generateSummary(id: string) {
-    const res = await apiClient('').post<{ consultationId: string, summary: string, generatedAt: string }>(
+    const res = await apiClient('').post<{
+      consultationId: string
+      summary: string
+      generatedAt: string
+      traceId: string | null
+      citations: Array<{
+        chunkId: string
+        documentId: string
+        title: string
+        sectionPath: string | null
+        authority: string
+        snippet: string | null
+        score: number
+      }>
+    }>(
       `consultations/${id}/summary/generate`,
     )
     return res.data

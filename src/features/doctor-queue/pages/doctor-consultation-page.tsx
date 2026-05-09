@@ -141,6 +141,7 @@ export function DoctorConsultationPage({ consultationId }: Props) {
           <ClinicalSummaryPanel
             consultationId={consultationId}
             summary={consultation.clinicalSummary}
+            citations={consultation.clinicalSummaryCitations ?? []}
             isGenerating={generateSummaryMutation.isPending}
             onGenerate={() => void generateSummaryMutation.mutateAsync()}
             onFeedback={input => void summaryFeedbackMutation.mutateAsync(input)}

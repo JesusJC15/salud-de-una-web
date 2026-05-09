@@ -6,6 +6,15 @@ import { useState } from 'react'
 interface Props {
   consultationId: string
   summary?: string
+  citations?: Array<{
+    chunkId: string
+    documentId: string
+    title: string
+    sectionPath: string | null
+    authority: string
+    snippet: string | null
+    score: number
+  }>
   isGenerating: boolean
   onGenerate: () => void
   onFeedback: (input: {
@@ -25,6 +34,7 @@ interface Props {
 
 export function ClinicalSummaryPanel({
   summary,
+  citations,
   isGenerating,
   onGenerate,
   onFeedback,
@@ -106,6 +116,33 @@ export function ClinicalSummaryPanel({
         {!isGenerating && summary && (
           <div className="space-y-4">
             <p className="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap">{summary}</p>
+            {citations?.length
+              ? (
+                <div className="rounded-xl border border-cyan-100 bg-cyan-50/60 p-3">
+                  <p className="mb-2 text-xs font-bold uppercase tracking-wide text-cyan-700">
+                    Evidencia citada
+                  </p>
+                  <div className="space-y-2">
+                    {citations.map(citation => (
+                      <div key={citation.chunkId} className="rounded-lg border border-cyan-100 bg-white p-2.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs font-bold text-slate-800">{citation.title}</span>
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                            {citation.authority}
+                          </span>
+                          {citation.sectionPath
+                            ? <span className="text-[11px] text-slate-500">{citation.sectionPath}</span>
+                            : null}
+                        </div>
+                        {citation.snippet
+                          ? <p className="mt-1 text-xs leading-relaxed text-slate-600">{citation.snippet}</p>
+                          : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+              : null}
             <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
               <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Feedback médico</p>
               <div className="flex flex-wrap gap-2">

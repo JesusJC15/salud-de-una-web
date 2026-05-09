@@ -3,9 +3,8 @@
 import type { AppRole } from '@/utils/auth-claims'
 import { useAuth0 } from '@auth0/auth0-react'
 import { motion } from 'motion/react'
+import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { AdminHomePage } from '@/features/admin-home/pages/admin-home-page'
-import { DoctorHomePage } from '@/features/doctor-home/pages/doctor-home-page'
 import { authService } from '@/services/auth-service'
 
 type Role = AppRole | null
@@ -50,6 +49,7 @@ function UnknownRoleFallback({ onLogout }: { onLogout: () => void }) {
 
 export function DashboardPage() {
   const { isLoading: auth0Loading } = useAuth0()
+  const router = useRouter()
   const [role, setRole] = useState<Role>(null)
   const [roleLoading, setRoleLoading] = useState(true)
 
@@ -78,13 +78,30 @@ export function DashboardPage() {
     void detectRole()
   }, [auth0Loading])
 
+  useEffect(() => {
+    if (auth0Loading || roleLoading)
+      return
+
+    if (role === 'ADMIN') {
+      router.replace('/admin')
+      return
+    }
+
+    if (role === 'DOCTOR') {
+      router.replace('/doctor')
+    }
+  }, [
+    auth0Loading,
+    roleLoading,
+    role,
+    router,
+  ])
+
   if (auth0Loading || roleLoading)
     return <LoadingScreen />
 
-  if (role === 'DOCTOR')
-    return <DoctorHomePage />
-  if (role === 'ADMIN')
-    return <AdminHomePage />
+  if (role === 'DOCTOR' || role === 'ADMIN')
+    return <LoadingScreen />
 
   return (
     <UnknownRoleFallback

@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
+  DatabaseZap,
   Info,
   LogOut,
   ShieldCheck,
@@ -808,6 +809,7 @@ export function AdminHomePage() {
             <QuickActionBtn href="/doctor/queue" icon={Activity} label="Cola de consultas" />
             <QuickActionBtn href="/admin/doctors" icon={Users} label="Doctores" />
             <QuickActionBtn href="/admin/users" icon={ShieldCheck} label="Usuarios" />
+            <QuickActionBtn href="/admin/knowledge" icon={DatabaseZap} label="Knowledge" />
             <QuickActionBtn href="/admin/ai/prompts" icon={Zap} label="Prompts IA" />
             <QuickActionBtn href="/admin/billing" icon={TrendingUp} label="Facturación" />
           </div>
