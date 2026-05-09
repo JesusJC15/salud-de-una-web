@@ -168,7 +168,7 @@ describe('adminService', () => {
       bySpecialty: [],
     })
 
-    expect(getMock).toHaveBeenNthCalledWith(1, 'billing/prices')
+    expect(getMock).toHaveBeenNthCalledWith(1, 'billing/admin/prices')
     expect(patchMock).toHaveBeenNthCalledWith(1, 'billing/admin/prices/GENERAL_MEDICINE', {
       amount: 30000,
     })
