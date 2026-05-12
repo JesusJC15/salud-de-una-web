@@ -2,9 +2,27 @@
  * @jest-environment jsdom
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook } from '@testing-library/react'
 import * as React from 'react'
 import { useBusinessMetrics, useConsultationMetrics, useTechnicalMetrics } from './use-dashboard-metrics'
+
+async function waitForCondition(assertion: () => void, timeoutMs = 1000) {
+  const startedAt = Date.now()
+
+  while (true) {
+    try {
+      assertion()
+      return
+    }
+    catch (error) {
+      if (Date.now() - startedAt >= timeoutMs) {
+        throw error
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 10))
+    }
+  }
+}
 
 const mockGet = jest.fn()
 
@@ -36,7 +54,7 @@ describe('useBusinessMetrics', () => {
 
     const { result } = renderHook(() => useBusinessMetrics(), { wrapper: makeWrapper() })
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitForCondition(() => expect(result.current.isSuccess).toBe(true))
     expect(mockGet).toHaveBeenCalledWith('dashboard/business')
     expect(result.current.data?.kpis.totalPatients).toBe(10)
   })
@@ -46,12 +64,12 @@ describe('useTechnicalMetrics', () => {
   beforeEach(() => jest.clearAllMocks())
 
   it('calls dashboard/technical endpoint', async () => {
-    const techData = { sampleSize: 100, p95LatencyMs: 120, errorRate: 0.01, timestamp: new Date().toISOString(), source: 'redis' as const, degraded: false }
+    const techData = { sampleSize: 100, p95LatencyMs: 120, errorRate: 1, timestamp: new Date().toISOString(), source: 'redis' as const, degraded: false }
     mockGet.mockResolvedValue({ data: techData })
 
     const { result } = renderHook(() => useTechnicalMetrics(), { wrapper: makeWrapper() })
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitForCondition(() => expect(result.current.isSuccess).toBe(true))
     expect(mockGet).toHaveBeenCalledWith('dashboard/technical')
     expect(result.current.data?.degraded).toBe(false)
   })
@@ -75,7 +93,7 @@ describe('useConsultationMetrics', () => {
 
     const { result } = renderHook(() => useConsultationMetrics(), { wrapper: makeWrapper() })
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitForCondition(() => expect(result.current.isSuccess).toBe(true))
     expect(mockGet).toHaveBeenCalledWith('dashboard/consultations')
     expect(result.current.data?.totalConsultations).toBe(8)
   })

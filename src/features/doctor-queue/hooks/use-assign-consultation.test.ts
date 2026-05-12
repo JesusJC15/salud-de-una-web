@@ -2,10 +2,28 @@
  * @jest-environment jsdom
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook } from '@testing-library/react'
 import * as React from 'react'
 import { consultationService } from '@/features/doctor-queue/services/consultation-service'
 import { useAssignConsultation } from './use-assign-consultation'
+
+async function waitForCondition(assertion: () => void, timeoutMs = 1000) {
+  const startedAt = Date.now()
+
+  while (true) {
+    try {
+      assertion()
+      return
+    }
+    catch (error) {
+      if (Date.now() - startedAt >= timeoutMs) {
+        throw error
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 10))
+    }
+  }
+}
 
 jest.mock('@/features/doctor-queue/services/consultation-service')
 
@@ -29,7 +47,7 @@ describe('useAssignConsultation', () => {
 
     result.current.mutate('c1')
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitForCondition(() => expect(result.current.isSuccess).toBe(true))
     expect(mockAssign).toHaveBeenCalledWith('c1')
   })
 
@@ -40,6 +58,6 @@ describe('useAssignConsultation', () => {
 
     result.current.mutate('c1')
 
-    await waitFor(() => expect(result.current.isError).toBe(true))
+    await waitForCondition(() => expect(result.current.isError).toBe(true))
   })
 })

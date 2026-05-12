@@ -1,6 +1,7 @@
 import type {
   AiPromptItem,
   BillingPrice,
+  DoctorReviewItem,
   KnowledgeChunksResponse,
   KnowledgeDocumentsResponse,
   KnowledgeJobsResponse,
@@ -51,6 +52,11 @@ export const adminService = {
     const res = await apiClient('').get<ListDoctorsForReviewResponse>('admin/doctors', {
       params,
     })
+    return res.data
+  },
+
+  async getDoctorReview(doctorId: string) {
+    const res = await apiClient('').get<DoctorReviewItem>(`admin/doctors/${doctorId}`)
     return res.data
   },
 
@@ -173,9 +179,7 @@ export const adminService = {
       if (value !== undefined && value !== null)
         form.append(key, value)
     })
-    const res = await apiClient('').post('knowledge/documents/upload', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
+    const res = await apiClient('').post('knowledge/documents/upload', form)
     return res.data
   },
 
@@ -198,9 +202,7 @@ export const adminService = {
       if (value !== undefined && value !== null)
         form.append(key, value as string | Blob)
     })
-    const res = await apiClient('').post('knowledge/documents/upload', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
+    const res = await apiClient('').post('knowledge/documents/upload', form)
     return res.data
   },
 

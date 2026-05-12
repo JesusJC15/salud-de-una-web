@@ -2,10 +2,28 @@
  * @jest-environment jsdom
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook } from '@testing-library/react'
 import * as React from 'react'
 import { doctorService } from '@/features/doctor-queue/services/doctor-service'
 import { useDoctorAvailability } from './use-doctor-availability'
+
+async function waitForCondition(assertion: () => void, timeoutMs = 1000) {
+  const startedAt = Date.now()
+
+  while (true) {
+    try {
+      assertion()
+      return
+    }
+    catch (error) {
+      if (Date.now() - startedAt >= timeoutMs) {
+        throw error
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 10))
+    }
+  }
+}
 
 jest.mock('@/features/doctor-queue/services/doctor-service')
 
@@ -38,7 +56,7 @@ describe('useDoctorAvailability', () => {
 
     const { result } = renderHook(() => useDoctorAvailability(), { wrapper: makeWrapper() })
 
-    await waitFor(() => expect(result.current.availability).toBe('AVAILABLE'))
+    await waitForCondition(() => expect(result.current.availability).toBe('AVAILABLE'))
   })
 
   it('calls updateAvailability with PAUSED when toggling from AVAILABLE', async () => {
@@ -47,10 +65,10 @@ describe('useDoctorAvailability', () => {
 
     const { result } = renderHook(() => useDoctorAvailability(), { wrapper: makeWrapper() })
 
-    await waitFor(() => expect(result.current.availability).toBe('AVAILABLE'))
+    await waitForCondition(() => expect(result.current.availability).toBe('AVAILABLE'))
 
     result.current.toggle()
 
-    await waitFor(() => expect(mockUpdateAvailability).toHaveBeenCalledWith('PAUSED'))
+    await waitForCondition(() => expect(mockUpdateAvailability).toHaveBeenCalledWith('PAUSED'))
   })
 })

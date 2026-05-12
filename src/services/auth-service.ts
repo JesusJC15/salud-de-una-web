@@ -72,8 +72,12 @@ export function initAuthService(
 
 export const authService = {
   async initLegacySession(accessToken: string, refreshToken: string): Promise<void> {
-    ssSet(SS_ACCESS, accessToken)
-    ssSet(SS_REFRESH, refreshToken)
+    // SECURITY: Token storage in sessionStorage disabled for production
+    // Tokens should only be in httpOnly cookies (BFF) or Auth0 managed
+    if (process.env.NODE_ENV === 'development') {
+      ssSet(SS_ACCESS, accessToken)
+      ssSet(SS_REFRESH, refreshToken)
+    }
     await syncServerSessionCookie(accessToken)
     _lastSyncedAccessToken = accessToken
   },
@@ -100,6 +104,26 @@ export const authService = {
       }
     }
 
+    // Try to obtain token from server-side httpOnly cookie (BFF) — same-origin GET
+    try {
+      const res = await fetch(SESSION_ENDPOINT, { method: 'GET', credentials: 'same-origin' })
+      if (res.ok && res.status !== 204) {
+        const data = await res.json() as { accessToken?: string }
+        const serverToken = data.accessToken ?? null
+        if (serverToken) {
+          _lastSyncedAccessToken = serverToken
+          return serverToken
+          // FALLBACK: Only use sessionStorage in development mode
+          if (process.env.NODE_ENV !== 'development') {
+            return null
+          }
+        }
+      }
+    }
+    catch {
+      // fall through to legacy
+    }
+
     const legacyToken = ssGet(SS_ACCESS)
     if (legacyToken && legacyToken !== _lastSyncedAccessToken) {
       _lastSyncedAccessToken = legacyToken
@@ -117,6 +141,10 @@ export const authService = {
     }
 
     const refreshToken = ssGet(SS_REFRESH)
+    // In production, don't use sessionStorage refresh token
+    if (process.env.NODE_ENV !== 'development' && !refreshToken) {
+      return null
+    }
     if (!refreshToken)
       return null
 
@@ -132,8 +160,11 @@ export const authService = {
         return null
       }
       const data = await res.json() as { accessToken: string, refreshToken?: string }
-      ssSet(SS_ACCESS, data.accessToken)
-      ssSet(SS_REFRESH, data.refreshToken ?? refreshToken)
+      // Only store in sessionStorage in development
+      if (process.env.NODE_ENV === 'development') {
+        ssSet(SS_ACCESS, data.accessToken)
+        ssSet(SS_REFRESH, data.refreshToken ?? refreshToken)
+      }
       await syncServerSessionCookie(data.accessToken)
       _lastSyncedAccessToken = data.accessToken
       return { accessToken: data.accessToken }
@@ -148,11 +179,21 @@ export const authService = {
   getRefreshToken(): string | null {
     if (_isAuthenticated)
       return '__auth0_managed__'
+    // In production, don't return sessionStorage tokens
+    if (process.env.NODE_ENV !== 'development') {
+      return null
+    }
     return ssGet(SS_REFRESH)
   },
 
   isAuthenticated(): boolean {
-    return _isAuthenticated || ssGet(SS_ACCESS) !== null
+    if (_isAuthenticated)
+      return true
+    // In production, only trust Auth0 authentication state
+    if (process.env.NODE_ENV !== 'development') {
+      return false
+    }
+    return ssGet(SS_ACCESS) !== null
   },
 
   async getCurrentUser(tokenOverride?: string | null): Promise<AuthMeUser | null> {

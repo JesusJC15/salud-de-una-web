@@ -22,6 +22,9 @@ export interface NotificationListItem {
   type: string
   status: string
   message: string
+  resourceId?: EntityId | null
+  deepLink?: string | null
+  metadata?: Record<string, unknown> | null
   read: boolean
   readAt: IsoDateString | null
   createdAt: IsoDateString | null

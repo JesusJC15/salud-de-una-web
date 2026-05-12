@@ -12,12 +12,15 @@ export function AdminDoctorVerifyPage({ doctorId }: { doctorId: string }) {
   const [notes, setNotes] = useState('')
   const [evidenceUrl, setEvidenceUrl] = useState('')
 
-  const doctorsQuery = useQuery({
-    queryKey: ['admin', 'doctors'],
-    queryFn: () => adminService.listDoctors(),
+  const doctorQuery = useQuery({
+    queryKey: [
+      'admin',
+      'doctor-review',
+      doctorId,
+    ],
+    queryFn: () => adminService.getDoctorReview(doctorId),
+    retry: false,
   })
-
-  const doctor = (doctorsQuery.data?.items ?? []).find(item => item.id === doctorId)
 
   const verifyMutation = useMutation({
     mutationFn: (action: 'APPROVE' | 'REJECT') =>
@@ -29,6 +32,13 @@ export function AdminDoctorVerifyPage({ doctorId }: { doctorId: string }) {
     onSuccess: () => {
       toast.success('Verificación registrada correctamente')
       void queryClient.invalidateQueries({ queryKey: ['admin', 'doctors'] })
+      void queryClient.invalidateQueries({
+        queryKey: [
+          'admin',
+          'doctor-review',
+          doctorId,
+        ],
+      })
       router.push('/admin/doctors')
     },
     onError: (err: Error) => {
@@ -36,7 +46,7 @@ export function AdminDoctorVerifyPage({ doctorId }: { doctorId: string }) {
     },
   })
 
-  if (doctorsQuery.isLoading) {
+  if (doctorQuery.isLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-teal-500 border-t-transparent" />
@@ -44,7 +54,7 @@ export function AdminDoctorVerifyPage({ doctorId }: { doctorId: string }) {
     )
   }
 
-  if (!doctor) {
+  if (doctorQuery.isError || !doctorQuery.data) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <p className="text-sm text-slate-500">Doctor no encontrado.</p>
@@ -53,6 +63,7 @@ export function AdminDoctorVerifyPage({ doctorId }: { doctorId: string }) {
   }
 
   const isPending = verifyMutation.isPending
+  const doctor = doctorQuery.data
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">

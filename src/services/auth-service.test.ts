@@ -32,6 +32,24 @@ describe('authService (Auth0 adapter)', () => {
     return import('./auth-service')
   }
 
+  async function withNodeEnv<T>(value: string, fn: () => Promise<T> | T): Promise<T> {
+    const env = process.env as Record<string, string | undefined>
+    const previous = env.NODE_ENV
+    env.NODE_ENV = value
+
+    try {
+      return await fn()
+    }
+    finally {
+      if (previous === undefined) {
+        delete env.NODE_ENV
+      }
+      else {
+        env.NODE_ENV = previous
+      }
+    }
+  }
+
   beforeEach(() => {
     jest.clearAllMocks()
     delete (globalThis as Partial<typeof globalThis>).window
@@ -53,15 +71,18 @@ describe('authService (Auth0 adapter)', () => {
 
   it('stores and reads legacy session tokens from sessionStorage', async () => {
     const sessionStorage = mockBrowserSessionStorage()
-    const { authService, initAuthService } = await importFreshAuthService()
-    initAuthService(mockGetToken, mockLogout, false)
 
-    authService.initLegacySession('legacy-access', 'legacy-refresh')
+    await withNodeEnv('development', async () => {
+      const { authService, initAuthService } = await importFreshAuthService()
+      initAuthService(mockGetToken, mockLogout, false)
 
-    expect(sessionStorage.setItem).toHaveBeenCalledWith('salud-de-una.legacy.access', 'legacy-access')
-    expect(sessionStorage.setItem).toHaveBeenCalledWith('salud-de-una.legacy.refresh', 'legacy-refresh')
-    expect(authService.isAuthenticated()).toBe(true)
-    expect(authService.getRefreshToken()).toBe('legacy-refresh')
+      await authService.initLegacySession('legacy-access', 'legacy-refresh')
+
+      expect(sessionStorage.setItem).toHaveBeenCalledWith('salud-de-una.legacy.access', 'legacy-access')
+      expect(sessionStorage.setItem).toHaveBeenCalledWith('salud-de-una.legacy.refresh', 'legacy-refresh')
+      expect(authService.isAuthenticated()).toBe(true)
+      expect(authService.getRefreshToken()).toBe('legacy-refresh')
+    })
   })
 
   it('falls back to the legacy access token when Auth0 token retrieval fails', async () => {
@@ -100,16 +121,18 @@ describe('authService (Auth0 adapter)', () => {
       }),
     ) as typeof fetch
 
-    const { authService } = await importFreshAuthService()
+    await withNodeEnv('development', async () => {
+      const { authService } = await importFreshAuthService()
 
-    await expect(authService.refresh()).resolves.toEqual({ accessToken: 'new-access-token' })
-    expect(globalThis.fetch).toHaveBeenCalledWith('http://localhost:3000/v1/auth/refresh', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken: 'legacy-refresh' }),
+      await expect(authService.refresh()).resolves.toEqual({ accessToken: 'new-access-token' })
+      expect(globalThis.fetch).toHaveBeenCalledWith('http://localhost:3000/v1/auth/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: 'legacy-refresh' }),
+      })
+      expect(sessionStorage.setItem).toHaveBeenCalledWith('salud-de-una.legacy.access', 'new-access-token')
+      expect(sessionStorage.setItem).toHaveBeenCalledWith('salud-de-una.legacy.refresh', 'legacy-refresh')
     })
-    expect(sessionStorage.setItem).toHaveBeenCalledWith('salud-de-una.legacy.access', 'new-access-token')
-    expect(sessionStorage.setItem).toHaveBeenCalledWith('salud-de-una.legacy.refresh', 'legacy-refresh')
   })
 
   it('returns null when there is no legacy refresh token to exchange', async () => {

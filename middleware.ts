@@ -24,9 +24,9 @@ function applySecurityHeaders(res: NextResponse) {
     'Content-Security-Policy',
     [
       `default-src 'self'`,
-      `script-src 'self' 'unsafe-inline' 'unsafe-eval'`,
+      `script-src 'self' https:`,
       `worker-src blob: 'self'`,
-      `style-src 'self' 'unsafe-inline'`,
+      `style-src 'self' https:`,
       `img-src 'self' data: https:`,
       `font-src 'self' data:`,
       `connect-src 'self' https: wss: ${apiOrigin} ${auth0Origin}`,
@@ -39,7 +39,7 @@ function applySecurityHeaders(res: NextResponse) {
 async function validateToken(
   accessToken: string,
   apiBaseUrl: string,
-): Promise<{ role: string } | null> {
+): Promise<{ kind: 'valid', role: string } | { kind: 'invalid' } | { kind: 'unavailable' }> {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 3000)
 
@@ -54,14 +54,19 @@ async function validateToken(
       signal: controller.signal,
     })
 
-    if (!response.ok)
-      return null
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        return { kind: 'invalid' }
+      }
+
+      return { kind: 'unavailable' }
+    }
 
     const payload = await response.json() as { user?: { role?: string } }
-    return payload.user?.role ? { role: payload.user.role } : null
+    return payload.user?.role ? { kind: 'valid', role: payload.user.role } : { kind: 'invalid' }
   }
   catch {
-    return null
+    return { kind: 'unavailable' }
   }
   finally {
     clearTimeout(timeoutId)
@@ -84,10 +89,9 @@ export async function middleware(req: NextRequest) {
       return redirect
     }
 
-    const user = await validateToken(accessToken, apiBaseUrl)
+    const validation = await validateToken(accessToken, apiBaseUrl)
 
-    if (!user) {
-      // Token expired or network error — clear cookie and send to login
+    if (validation.kind === 'invalid') {
       const loginUrl = new URL('/login', req.url)
       loginUrl.searchParams.set('next', pathname)
       const redirect = NextResponse.redirect(loginUrl)
@@ -102,7 +106,13 @@ export async function middleware(req: NextRequest) {
       return redirect
     }
 
-    if (user.role !== 'DOCTOR') {
+    if (validation.kind === 'unavailable') {
+      const next = NextResponse.next()
+      applySecurityHeaders(next)
+      return next
+    }
+
+    if (validation.role !== 'DOCTOR') {
       const redirect = NextResponse.redirect(new URL('/dashboard', req.url))
       applySecurityHeaders(redirect)
       return redirect
@@ -121,10 +131,9 @@ export async function middleware(req: NextRequest) {
       return redirect
     }
 
-    const user = await validateToken(accessToken, apiBaseUrl)
+    const validation = await validateToken(accessToken, apiBaseUrl)
 
-    if (!user) {
-      // Token expired or network error — clear cookie and send to login
+    if (validation.kind === 'invalid') {
       const loginUrl = new URL('/login', req.url)
       loginUrl.searchParams.set('next', pathname)
       const redirect = NextResponse.redirect(loginUrl)
@@ -139,7 +148,13 @@ export async function middleware(req: NextRequest) {
       return redirect
     }
 
-    if (user.role !== 'ADMIN') {
+    if (validation.kind === 'unavailable') {
+      const next = NextResponse.next()
+      applySecurityHeaders(next)
+      return next
+    }
+
+    if (validation.role !== 'ADMIN') {
       const redirect = NextResponse.redirect(new URL('/dashboard', req.url))
       applySecurityHeaders(redirect)
       return redirect

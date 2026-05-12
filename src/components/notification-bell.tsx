@@ -1,6 +1,7 @@
 'use client'
 
 import { Bell, CheckCheck, X } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { useNotifications } from '@/features/notifications/hooks/use-notifications'
 
@@ -21,6 +22,7 @@ function formatRelativeTime(dateStr: string | null): string {
 export function NotificationBell() {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const router = useRouter()
   const { data, markRead, markAllRead, isMarkingAll } = useNotifications()
 
   const items = data?.items ?? []
@@ -98,8 +100,12 @@ export function NotificationBell() {
                   key={item.id}
                   type="button"
                   onClick={() => {
+                    setOpen(false)
                     if (!item.read) {
                       markRead(item.id)
+                    }
+                    if (item.deepLink) {
+                      router.push(item.deepLink)
                     }
                   }}
                   className={`w-full border-b border-slate-50 px-4 py-3 text-left transition-colors last:border-0 hover:bg-slate-50 ${!item.read ? 'bg-teal-50/40' : ''}`}
@@ -110,6 +116,13 @@ export function NotificationBell() {
                     )}
                     <div className={!item.read ? '' : 'pl-4'}>
                       <p className="text-xs font-medium text-slate-700">{item.message}</p>
+                      {item.resourceId && (
+                        <p className="mt-0.5 text-[11px] font-semibold text-teal-600">
+                          Recurso:
+                          {' '}
+                          {item.resourceId}
+                        </p>
+                      )}
                       <p className="mt-0.5 text-[11px] text-slate-400">
                         {formatRelativeTime(item.createdAt)}
                       </p>

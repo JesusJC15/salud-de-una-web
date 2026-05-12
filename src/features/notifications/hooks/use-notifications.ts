@@ -53,6 +53,12 @@ export function useNotifications() {
         queryClient.setQueryData<NotificationsResponseDto>(['notifications'], (old) => {
           if (!old)
             return old
+          if (old.items.some(existing => existing.id === notification.id)) {
+            return {
+              ...old,
+              items: old.items.map(existing => existing.id === notification.id ? notification : existing),
+            }
+          }
           return {
             items: [notification, ...old.items].slice(0, 20),
             unreadCount: old.unreadCount + 1,

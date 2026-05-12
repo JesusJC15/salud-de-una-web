@@ -284,7 +284,7 @@ export function AdminHomePage() {
       alerts.push({ level: 'warning', message: `Latencia P95 elevada: ${latency(tech.p95LatencyMs)} — revisar carga del servidor` })
     }
     if (tech.errorRate > 0.05) {
-      alerts.push({ level: 'critical', message: `Tasa de error alta: ${pct(tech.errorRate * 100)} — revisar logs del backend` })
+      alerts.push({ level: 'critical', message: `Tasa de error alta: ${pct(tech.errorRate)} — revisar logs del backend` })
     }
   }
 
@@ -442,7 +442,7 @@ export function AdminHomePage() {
             />
             <KpiCard
               label="Tasa de error"
-              value={tech ? pct(tech.errorRate * 100) : '—'}
+              value={tech ? pct(tech.errorRate) : '—'}
               icon={Activity}
               accent={tech && tech.errorRate > 0.03 ? 'red' : 'green'}
               loading={techLoading}
@@ -711,19 +711,21 @@ export function AdminHomePage() {
           {/* Health badges */}
           <div className="mb-4 grid grid-cols-3 gap-3">
             {([
-              'mongodb',
-              'redis',
-              'ai',
+              { key: 'database', label: 'MongoDB' },
+              { key: 'redis', label: 'Redis' },
+              { key: 'ai', label: 'IA (Gemini)' },
             ] as const).map((key) => {
-              const value = health?.[key]
-              const ok = value === 'connected' || value === 'up' || value === 'healthy'
+              const check = health?.checks[key.key]
+              const value = check?.status
+              const isWarning = value === 'degraded'
+              const ok = value === 'up'
               return (
-                <div key={key} className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 ${ok ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50'}`}>
-                  <span className={`h-2 w-2 rounded-full ${ok ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                  <span className={`text-xs font-bold uppercase ${ok ? 'text-emerald-700' : 'text-red-700'}`}>
-                    {key === 'mongodb' ? 'MongoDB' : key === 'redis' ? 'Redis' : 'IA (Gemini)'}
+                <div key={key.key} className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 ${ok ? 'border-emerald-200 bg-emerald-50' : isWarning ? 'border-amber-200 bg-amber-50' : 'border-red-200 bg-red-50'}`}>
+                  <span className={`h-2 w-2 rounded-full ${ok ? 'bg-emerald-500' : isWarning ? 'bg-amber-500' : 'bg-red-500'}`} />
+                  <span className={`text-xs font-bold uppercase ${ok ? 'text-emerald-700' : isWarning ? 'text-amber-700' : 'text-red-700'}`}>
+                    {key.label}
                   </span>
-                  <span className={`ml-auto text-[11px] ${ok ? 'text-emerald-600' : 'text-red-600'}`}>
+                  <span className={`ml-auto text-[11px] ${ok ? 'text-emerald-600' : isWarning ? 'text-amber-600' : 'text-red-600'}`}>
                     {value ?? '—'}
                   </span>
                 </div>

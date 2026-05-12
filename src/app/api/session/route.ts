@@ -38,3 +38,14 @@ export async function DELETE() {
 
   return NextResponse.json({ cleared: true })
 }
+
+export async function GET() {
+  const cookieStore = await cookies()
+  const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value
+
+  if (!accessToken) {
+    return NextResponse.json({}, { status: 204 })
+  }
+
+  return NextResponse.json({ accessToken })
+}

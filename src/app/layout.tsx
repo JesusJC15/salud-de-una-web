@@ -1,16 +1,8 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import { Toaster } from 'react-hot-toast'
 import { cn } from '@/lib/utils'
 import { Auth0ClientProvider } from '@/providers/auth0-provider'
 import './globals.css'
-
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
-
-const interSans = Inter({
-  variable: '--font-inter-sans',
-  subsets: ['latin'],
-})
 
 export const metadata: Metadata = {
   title: 'SaludDeUna',
@@ -24,8 +16,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={cn('font-sans', inter.variable)}>
-      <body className={`${interSans.variable} antialiased`}>
+    <html lang="en" className={cn('font-sans')}>
+      <body className="antialiased">
         <Auth0ClientProvider>
           <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
           <div className="gradient-bg dark:bg-background-dark relative flex min-h-screen flex-col">

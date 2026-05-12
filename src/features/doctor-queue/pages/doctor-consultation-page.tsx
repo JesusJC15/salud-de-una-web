@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import { ChatPanel } from '@/features/doctor-queue/components/chat-panel'
 import { ClinicalSummaryPanel } from '@/features/doctor-queue/components/clinical-summary-panel'
 import { PatientTimelinePanel } from '@/features/doctor-queue/components/patient-timeline-panel'
@@ -43,11 +44,17 @@ export function DoctorConsultationPage({ consultationId }: Props) {
   }, [])
 
   const handleClose = async () => {
-    await closeConsultationMutation.mutateAsync({
-      baselineSymptomSeverity,
-      redFlagsConfirmed,
-    })
-    router.push('/doctor/queue')
+    try {
+      await closeConsultationMutation.mutateAsync({
+        baselineSymptomSeverity,
+        redFlagsConfirmed,
+      })
+      toast.success('Consulta cerrada')
+      router.push('/doctor/queue')
+    }
+    catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No fue posible cerrar la consulta')
+    }
   }
 
   if (isLoading) {
@@ -143,8 +150,16 @@ export function DoctorConsultationPage({ consultationId }: Props) {
             summary={consultation.clinicalSummary}
             citations={consultation.clinicalSummaryCitations ?? []}
             isGenerating={generateSummaryMutation.isPending}
-            onGenerate={() => void generateSummaryMutation.mutateAsync()}
-            onFeedback={input => void summaryFeedbackMutation.mutateAsync(input)}
+            onGenerate={() => {
+              void generateSummaryMutation.mutateAsync().catch((error: unknown) => {
+                toast.error(error instanceof Error ? error.message : 'No fue posible generar el resumen')
+              })
+            }}
+            onFeedback={(input) => {
+              void summaryFeedbackMutation.mutateAsync(input).catch((error: unknown) => {
+                toast.error(error instanceof Error ? error.message : 'No fue posible registrar el feedback')
+              })
+            }}
             feedbackValue={consultation.summaryFeedback?.value ?? null}
             disabled={isClosed}
             triage={consultation.triage}
