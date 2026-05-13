@@ -29,9 +29,10 @@ function applySecurityHeaders(res: NextResponse) {
     'Content-Security-Policy',
     [
       `default-src 'self'`,
-      `script-src 'self' https:`,
+      // Next.js App Router emits inline bootstrap scripts during SSR hydration.
+      `script-src 'self' 'unsafe-inline' https:`,
       `worker-src blob: 'self'`,
-      `style-src 'self' https:`,
+      `style-src 'self' 'unsafe-inline' https:`,
       `img-src 'self' data: https:`,
       `font-src 'self' data:`,
       `connect-src 'self' https: wss: ${apiOrigin} ${auth0Origin}`,

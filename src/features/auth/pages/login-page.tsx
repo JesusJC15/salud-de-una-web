@@ -35,13 +35,28 @@ export function LoginPage() {
   const router = useRouter()
   const { isAuthenticated, isLoading } = useAuth0()
   const [hasLegacySession] = useState(() => authService.isAuthenticated())
+  const [auth0TimedOut, setAuth0TimedOut] = useState(false)
 
   useEffect(() => {
-    if (hasLegacySession || (!isLoading && isAuthenticated)) {
+    if (!isLoading) {
+      queueMicrotask(() => setAuth0TimedOut(false))
+      return
+    }
+
+    const timeout = window.setTimeout(() => {
+      setAuth0TimedOut(true)
+    }, 2500)
+
+    return () => window.clearTimeout(timeout)
+  }, [isLoading])
+
+  useEffect(() => {
+    if (hasLegacySession || ((!isLoading || auth0TimedOut) && isAuthenticated)) {
       router.push('/dashboard')
     }
   }, [
     isLoading,
+    auth0TimedOut,
     isAuthenticated,
     hasLegacySession,
     router,

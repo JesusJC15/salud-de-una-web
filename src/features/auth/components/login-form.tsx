@@ -18,7 +18,7 @@ export default function LoginForm() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
-  const isLoading = legacyLoading || (!auth0Disabled && auth0Loading)
+  const isLoading = legacyLoading
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -139,7 +139,7 @@ export default function LoginForm() {
         <Button
           type="button"
           onClick={handleAuth0}
-          disabled={isLoading || auth0Disabled}
+          disabled={isLoading || auth0Loading || auth0Disabled}
           variant="outline"
           className="w-full h-12 rounded-xl border-slate-200 bg-white font-semibold text-slate-700 hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
