@@ -132,7 +132,7 @@ export interface BillingPrice {
 export type TransactionStatus = 'PENDING' | 'COMPLETED' | 'REFUNDED'
 
 export interface BillingTransaction {
-  _id: string
+  id: string
   patientId: string
   consultationId: string
   specialty: string

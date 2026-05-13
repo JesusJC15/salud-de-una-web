@@ -156,7 +156,7 @@ export default function AdminBillingPage() {
                     </tr>
                   )
                   : transactions.map(t => (
-                    <tr key={t._id} className="hover:bg-slate-50">
+                    <tr key={t.id} className="hover:bg-slate-50">
                       <td className="px-4 py-3 text-slate-500">
                         {t.createdAt ? new Date(t.createdAt).toLocaleDateString('es-CO') : '—'}
                       </td>
