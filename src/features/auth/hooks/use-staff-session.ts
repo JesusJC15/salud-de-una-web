@@ -4,6 +4,7 @@ import type { AuthMeUser } from '@/types/auth'
 import { useAuth0 } from '@auth0/auth0-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ApiClientError } from '@/api/api-client'
+import { useAuth0LoadingTimeout } from '@/features/auth/hooks/use-auth0-loading-timeout'
 import { authService } from '@/services/auth-service'
 
 export type StaffSessionState
@@ -17,7 +18,8 @@ export function useStaffSession(allowedRoles?: string[]) {
   const { isAuthenticated, isLoading } = useAuth0()
   const [state, setState] = useState<StaffSessionState>({ status: 'checking', user: null })
   const auth0Disabled = process.env.NEXT_PUBLIC_ENABLE_E2E_BACKEND_MOCK === 'true'
-  const auth0IsLoading = !auth0Disabled && isLoading
+  const auth0TimedOut = useAuth0LoadingTimeout(isLoading, 3500)
+  const auth0IsLoading = !auth0Disabled && isLoading && !auth0TimedOut
   const auth0IsAuthenticated = !auth0Disabled && isAuthenticated
   const allowedRolesKey = allowedRoles?.join('|') ?? ''
   const allowedRoleSet = useMemo(

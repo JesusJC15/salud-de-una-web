@@ -22,18 +22,19 @@ const inputClass = 'h-12 rounded-xl border-none bg-white text-base text-slate-90
 
 export default function RegisterForm() {
   const router = useRouter()
-  const { loginWithRedirect, isLoading: auth0Redirecting } = useAuth0()
+  const { loginWithRedirect } = useAuth0()
   const [method, setMethod] = useState<RegisterMethod>('email')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [auth0Submitting, setAuth0Submitting] = useState(false)
   const [auth0Error, setAuth0Error] = useState<string | null>(null)
 
   const legacyHook = useRegisterDoctorLegacy()
   const { loading: legacyLoading, error: legacyError, formData, clearError, updateField } = legacyHook
 
-  const loading = method === 'email' ? legacyLoading : auth0Redirecting
+  const loading = method === 'email' ? legacyLoading : auth0Submitting
   const error = method === 'email' ? legacyError : auth0Error
 
   const specialties = useMemo(() => Object.values(Specialty), [])
@@ -78,6 +79,7 @@ export default function RegisterForm() {
       }
 
       try {
+        setAuth0Submitting(true)
         sessionStorage.setItem('salud-de-una.pending-provision', JSON.stringify(provisionPayload))
 
         await loginWithRedirect({
@@ -91,6 +93,9 @@ export default function RegisterForm() {
       catch (err) {
         sessionStorage.removeItem('salud-de-una.pending-provision')
         setAuth0Error(err instanceof Error ? err.message : 'No fue posible iniciar el registro')
+      }
+      finally {
+        setAuth0Submitting(false)
       }
 
       return

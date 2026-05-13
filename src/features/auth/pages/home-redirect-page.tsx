@@ -4,26 +4,14 @@ import { useAuth0 } from '@auth0/auth0-react'
 import { HeartPulse } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
+import { useAuth0LoadingTimeout } from '@/features/auth/hooks/use-auth0-loading-timeout'
 import { authService } from '@/services/auth-service'
 
 export function HomeRedirectPage() {
   const router = useRouter()
   const { isLoading, isAuthenticated } = useAuth0()
-  const [auth0TimedOut, setAuth0TimedOut] = useState(false)
-
-  useEffect(() => {
-    if (!isLoading) {
-      queueMicrotask(() => setAuth0TimedOut(false))
-      return
-    }
-
-    const timeout = window.setTimeout(() => {
-      setAuth0TimedOut(true)
-    }, 2500)
-
-    return () => window.clearTimeout(timeout)
-  }, [isLoading])
+  const auth0TimedOut = useAuth0LoadingTimeout(isLoading)
 
   useEffect(() => {
     if (isLoading && !auth0TimedOut)

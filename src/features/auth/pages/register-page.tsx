@@ -11,6 +11,7 @@ import RegisterForm from '@/features/auth/components/register-form'
 import {
   REGISTER_BENEFITS,
 } from '@/features/auth/constants/register-page-content'
+import { useAuth0LoadingTimeout } from '@/features/auth/hooks/use-auth0-loading-timeout'
 import { authService } from '@/services/auth-service'
 
 const BENEFIT_ICONS = [
@@ -22,15 +23,17 @@ const BENEFIT_ICONS = [
 export function RegisterPage() {
   const router = useRouter()
   const { isAuthenticated, isLoading } = useAuth0()
+  const auth0TimedOut = useAuth0LoadingTimeout(isLoading)
 
   useEffect(() => {
-    if (isLoading)
+    if (isLoading && !auth0TimedOut)
       return
     if (isAuthenticated || authService.isAuthenticated()) {
       router.push('/dashboard')
     }
   }, [
     isLoading,
+    auth0TimedOut,
     isAuthenticated,
     router,
   ])

@@ -1,26 +1,126 @@
 'use client'
 
+import type { AuthMeResponseDto, AuthMeUser } from '@/types/auth'
 import { useAuth0 } from '@auth0/auth0-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { useAuth0LoadingTimeout } from '@/features/auth/hooks/use-auth0-loading-timeout'
 import { authService } from '@/services/auth-service'
+import { UserRole } from '@/types/enums'
 import envConfig from '@/utils/config/envConfig'
 
 type CallbackState = 'loading' | 'provisioning' | 'error'
 
-// Prevents re-entering the auto-provision block after a page reload.
-// If the reloaded token still lacks db_id we stop and show an error.
+interface PendingProvision {
+  role: 'DOCTOR' | 'PATIENT'
+  data: unknown
+}
+
+type CurrentUserResult
+  = | { kind: 'authenticated', user: AuthMeUser }
+    | { kind: 'unauthenticated' }
+    | { kind: 'backendUnavailable', message: string }
+
+const PENDING_PROVISION_KEY = 'salud-de-una.pending-provision'
 const PROVISION_ATTEMPTED_KEY = 'salud-de-una.provision-attempted'
+const AUTH0_TIMEOUT_MS = 8000
+const FETCH_TIMEOUT_MS = 15000
+
+function routeForRole(role: AuthMeUser['role']): string {
+  if (role === UserRole.ADMIN)
+    return '/admin'
+  if (role === UserRole.DOCTOR)
+    return '/doctor'
+  return '/dashboard'
+}
+
+function auth0ClaimsErrorMessage(): string {
+  return 'La cuenta fue vinculada, pero el token de Auth0 aun no incluye los claims requeridos por el backend. Revisa la Action de Auth0 para emitir db_id y role, cierra sesion e intenta iniciar nuevamente.'
+}
+
+async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    })
+  }
+  finally {
+    window.clearTimeout(timeout)
+  }
+}
+
+async function readErrorMessage(res: Response, fallback: string): Promise<string> {
+  const body = await res.json().catch(() => null) as { message?: string } | null
+  if (typeof body?.message === 'string' && body.message.trim())
+    return body.message
+  return fallback
+}
+
+function readPendingProvision(): PendingProvision | null {
+  const value = sessionStorage.getItem(PENDING_PROVISION_KEY)
+  if (!value)
+    return null
+
+  try {
+    const parsed = JSON.parse(value) as PendingProvision
+    if ((parsed.role === 'DOCTOR' || parsed.role === 'PATIENT') && 'data' in parsed)
+      return parsed
+  }
+  catch {
+    // handled below
+  }
+
+  sessionStorage.removeItem(PENDING_PROVISION_KEY)
+  throw new Error('La informacion temporal del registro Auth0 esta corrupta. Vuelve a iniciar el registro.')
+}
+
+async function fetchCurrentUser(baseUrl: string, token: string): Promise<CurrentUserResult> {
+  try {
+    const res = await fetchWithTimeout(`${baseUrl}/auth/me`, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    if (res.ok) {
+      const data = await res.json() as AuthMeResponseDto
+      return { kind: 'authenticated', user: data.user }
+    }
+
+    if (res.status === 401 || res.status === 403)
+      return { kind: 'unauthenticated' }
+
+    return {
+      kind: 'backendUnavailable',
+      message: await readErrorMessage(res, `Backend respondio HTTP ${res.status} al validar la sesion`),
+    }
+  }
+  catch (err) {
+    return {
+      kind: 'backendUnavailable',
+      message: err instanceof Error && err.name === 'AbortError'
+        ? 'El backend no respondio a tiempo al validar la sesion'
+        : 'No fue posible conectar con el backend para validar la sesion',
+    }
+  }
+}
 
 export default function CallbackPage() {
   const { isLoading, isAuthenticated, error, getAccessTokenSilently } = useAuth0()
   const router = useRouter()
+  const auth0TimedOut = useAuth0LoadingTimeout(isLoading, AUTH0_TIMEOUT_MS)
   const handledRef = useRef(false)
   const [state, setState] = useState<CallbackState>('loading')
   const [errorMessage, setErrorMessage] = useState<string>('')
 
   useEffect(() => {
-    if (isLoading || handledRef.current)
+    if ((isLoading && !auth0TimedOut) || handledRef.current)
       return
 
     if (error) {
@@ -29,97 +129,119 @@ export default function CallbackPage() {
       return
     }
 
-    if (!isAuthenticated)
+    if (!isAuthenticated) {
+      queueMicrotask(() => {
+        setErrorMessage(
+          auth0TimedOut
+            ? 'Auth0 no termino de inicializar la sesion. Verifica las variables NEXT_PUBLIC_AUTH0_* y la URL de callback.'
+            : 'Auth0 no devolvio una sesion autenticada.',
+        )
+        setState('error')
+      })
       return
+    }
+
+    async function getFreshToken() {
+      const audience = process.env.NEXT_PUBLIC_AUTH0_AUDIENCE
+      return getAccessTokenSilently({
+        authorizationParams: { audience },
+        cacheMode: 'off',
+      })
+    }
+
+    async function provisionWithAuth0(token: string, pendingProvision: PendingProvision | null) {
+      const baseUrl = envConfig.apiBaseUrl
+      const endpoint = pendingProvision?.role === 'PATIENT'
+        ? '/auth/provision/patient'
+        : '/auth/provision/doctor'
+
+      const res = await fetchWithTimeout(`${baseUrl}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(pendingProvision?.data ?? {}),
+      })
+
+      if (!res.ok) {
+        throw new Error(
+          await readErrorMessage(
+            res,
+            pendingProvision
+              ? `Error ${res.status} al crear el perfil`
+              : 'No fue posible vincular tu cuenta. Si eres administrador, tu acceso debe ser activado manualmente.',
+          ),
+        )
+      }
+    }
 
     async function handleCallback() {
       handledRef.current = true
 
       try {
-        const audience = process.env.NEXT_PUBLIC_AUTH0_AUDIENCE
         const baseUrl = envConfig.apiBaseUrl
+        const pendingProvision = readPendingProvision()
+        const token = await getFreshToken()
 
-        const token = await getAccessTokenSilently({ authorizationParams: { audience } })
-        const pendingProvision = sessionStorage.getItem('salud-de-una.pending-provision')
-
-        // ── Explicit provision from registration form ─────────────────────────
         if (pendingProvision) {
-          sessionStorage.removeItem('salud-de-una.pending-provision')
+          setState('provisioning')
+          sessionStorage.removeItem(PENDING_PROVISION_KEY)
+          await provisionWithAuth0(token, pendingProvision)
 
-          const payload = JSON.parse(pendingProvision) as { role: string, data: unknown }
-          const endpoint = payload.role === 'DOCTOR' ? '/auth/provision/doctor' : '/auth/provision/patient'
+          const freshToken = await getFreshToken()
+          const current = await fetchCurrentUser(baseUrl, freshToken)
 
-          const res = await fetch(`${baseUrl}${endpoint}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify(payload.data),
-          })
-
-          if (!res.ok) {
-            const body = await res.json().catch(() => ({ message: 'Error desconocido' })) as { message?: string }
-            throw new Error(body.message ?? `Error ${res.status} al crear el perfil`)
+          if (current.kind === 'authenticated') {
+            sessionStorage.removeItem(PROVISION_ATTEMPTED_KEY)
+            await authService.syncSession(freshToken)
+            router.replace(routeForRole(current.user.role))
+            return
           }
+
+          throw new Error(
+            current.kind === 'backendUnavailable'
+              ? current.message
+              : auth0ClaimsErrorMessage(),
+          )
         }
 
-        // ── Try to get the current user ───────────────────────────────────────
-        const currentUser = await authService.getCurrentUser(token)
+        const current = await fetchCurrentUser(baseUrl, token)
 
-        // ── Auto-provision: Auth0 account not yet linked to MongoDB ───────────
-        // Happens when the user registered with email/password and this is
-        // their first Auth0 login. app_metadata.db_id hasn't been set yet
-        // so the token carries no db_id claim.
-        if (!currentUser && !pendingProvision) {
-          // Loop guard: if we already provisioned and reloaded but db_id
-          // is still missing, stop and show an error.
-          if (sessionStorage.getItem(PROVISION_ATTEMPTED_KEY)) {
-            sessionStorage.removeItem(PROVISION_ATTEMPTED_KEY)
-            throw new Error(
-              'No fue posible vincular tu cuenta. Verificá que el doctor esté registrado o contactá al administrador.',
-            )
-          }
-
-          setState('provisioning')
-
-          const provisionRes = await fetch(`${baseUrl}/auth/provision/doctor`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({}),
-          })
-
-          if (!provisionRes.ok) {
-            const body = await provisionRes.json().catch(() => ({})) as { message?: string }
-            throw new Error(
-              body.message
-              ?? 'No fue posible vincular tu cuenta. Si sos administrador, tu acceso debe ser activado manualmente.',
-            )
-          }
-
-          // Provisioning updated app_metadata.db_id in Auth0.
-          // We need a fresh token that includes the new claim. The safest
-          // approach is a full page reload: the Auth0 SDK re-initialises
-          // with an empty in-memory cache, uses the refresh token to
-          // obtain a new access token, and the Post-Login Action injects
-          // db_id from the freshly-written app_metadata.
-          //
-          // We do NOT use loginWithRedirect here — calling it inside a
-          // useEffect with Auth0 SDK functions in the dependency array
-          // can trigger an infinite re-render loop that freezes the browser.
-          sessionStorage.setItem(PROVISION_ATTEMPTED_KEY, '1')
-          window.location.reload()
+        if (current.kind === 'authenticated') {
+          sessionStorage.removeItem(PROVISION_ATTEMPTED_KEY)
+          await authService.syncSession(token)
+          router.replace(routeForRole(current.user.role))
           return
         }
 
-        if (!currentUser) {
-          throw new Error('No fue posible vincular tu cuenta con un perfil de SaludDeUna')
+        if (current.kind === 'backendUnavailable')
+          throw new Error(current.message)
+
+        if (sessionStorage.getItem(PROVISION_ATTEMPTED_KEY)) {
+          sessionStorage.removeItem(PROVISION_ATTEMPTED_KEY)
+          throw new Error(auth0ClaimsErrorMessage())
         }
 
-        // Success — clean up guard, sync session cookie, navigate to app.
-        sessionStorage.removeItem(PROVISION_ATTEMPTED_KEY)
-        await authService.syncSession(token)
-        router.replace('/dashboard')
+        setState('provisioning')
+        sessionStorage.setItem(PROVISION_ATTEMPTED_KEY, '1')
+        await provisionWithAuth0(token, null)
+
+        const freshToken = await getFreshToken()
+        const linkedUser = await fetchCurrentUser(baseUrl, freshToken)
+
+        if (linkedUser.kind === 'authenticated') {
+          sessionStorage.removeItem(PROVISION_ATTEMPTED_KEY)
+          await authService.syncSession(freshToken)
+          router.replace(routeForRole(linkedUser.user.role))
+          return
+        }
+
+        throw new Error(
+          linkedUser.kind === 'backendUnavailable'
+            ? linkedUser.message
+            : auth0ClaimsErrorMessage(),
+        )
       }
       catch (err) {
-        const message = err instanceof Error ? err.message : 'Error al procesar el inicio de sesión'
+        const message = err instanceof Error ? err.message : 'Error al procesar el inicio de sesion'
         setErrorMessage(message)
         setState('error')
       }
@@ -128,6 +250,7 @@ export default function CallbackPage() {
     void handleCallback()
   }, [
     isLoading,
+    auth0TimedOut,
     isAuthenticated,
     error,
     getAccessTokenSilently,
@@ -137,20 +260,20 @@ export default function CallbackPage() {
   if (state === 'error') {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="flex flex-col items-center gap-4 max-w-sm text-center">
-          <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
+        <div className="flex max-w-sm flex-col items-center gap-4 text-center">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
             <svg className="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
-          <p className="text-sm font-medium text-slate-800">Error al completar el inicio de sesión</p>
+          <p className="text-sm font-medium text-slate-800">Error al completar el inicio de sesion</p>
           <p className="text-xs text-slate-500">{errorMessage}</p>
           <button
             type="button"
             onClick={() => router.replace('/login')}
             className="text-sm text-teal-600 underline hover:text-teal-700"
           >
-            Volver al inicio de sesión
+            Volver al inicio de sesion
           </button>
         </div>
       </div>
@@ -162,7 +285,7 @@ export default function CallbackPage() {
       <div className="flex flex-col items-center gap-4">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-teal-500 border-t-transparent" />
         <p className="text-sm text-slate-500">
-          {state === 'provisioning' ? 'Vinculando tu cuenta...' : 'Verificando sesión...'}
+          {state === 'provisioning' ? 'Vinculando tu cuenta...' : 'Verificando sesion...'}
         </p>
       </div>
     </div>

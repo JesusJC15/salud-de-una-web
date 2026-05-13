@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useEffect, useState } from 'react'
 import { cardPopIn, floatingTransition, pageReveal, staggerItem, staggerParent } from '@/components/animations/motion-presets'
 import LoginForm from '@/features/auth/components/login-form'
+import { useAuth0LoadingTimeout } from '@/features/auth/hooks/use-auth0-loading-timeout'
 import { authService } from '@/services/auth-service'
 
 function RegistrationSuccessBanner() {
@@ -35,20 +36,7 @@ export function LoginPage() {
   const router = useRouter()
   const { isAuthenticated, isLoading } = useAuth0()
   const [hasLegacySession] = useState(() => authService.isAuthenticated())
-  const [auth0TimedOut, setAuth0TimedOut] = useState(false)
-
-  useEffect(() => {
-    if (!isLoading) {
-      queueMicrotask(() => setAuth0TimedOut(false))
-      return
-    }
-
-    const timeout = window.setTimeout(() => {
-      setAuth0TimedOut(true)
-    }, 2500)
-
-    return () => window.clearTimeout(timeout)
-  }, [isLoading])
+  const auth0TimedOut = useAuth0LoadingTimeout(isLoading)
 
   useEffect(() => {
     if (hasLegacySession || ((!isLoading || auth0TimedOut) && isAuthenticated)) {
