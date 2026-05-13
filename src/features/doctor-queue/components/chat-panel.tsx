@@ -4,29 +4,32 @@ import type { KeyboardEvent } from 'react'
 import type { ChatMessage } from '@/features/doctor-queue/services/consultation-service'
 import { useEffect, useRef, useState } from 'react'
 
-type ConnectionStatus = 'connecting' | 'connected' | 'disconnected'
+type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'reconnecting'
 
 const STATUS_LABEL: Record<ConnectionStatus, string> = {
   connecting: 'Conectando...',
   connected: 'En línea',
   disconnected: 'Desconectado',
+  reconnecting: 'Reconectando...',
 }
 
 const STATUS_COLOR: Record<ConnectionStatus, string> = {
   connecting: 'text-yellow-500',
   connected: 'text-green-500',
   disconnected: 'text-slate-400',
+  reconnecting: 'text-yellow-500',
 }
 
 interface Props {
   messages: ChatMessage[]
   status: ConnectionStatus
   onSend: (content: string) => void
+  onRetry?: (message: ChatMessage) => void
   currentUserId: string
   disabled?: boolean
 }
 
-export function ChatPanel({ messages, status, onSend, currentUserId, disabled }: Props) {
+export function ChatPanel({ messages, status, onSend, onRetry, currentUserId, disabled }: Props) {
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -59,6 +62,13 @@ export function ChatPanel({ messages, status, onSend, currentUserId, disabled }:
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-3 p-4">
+        {status !== 'connected' && (
+          <div className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
+            {status === 'reconnecting'
+              ? 'Reconectando el chat clínico. Los mensajes pendientes se podrán reintentar.'
+              : 'Chat desconectado. Verifica la conexión antes de enviar nuevos mensajes.'}
+          </div>
+        )}
         {messages.length === 0 && (
           <p className="text-center text-xs text-slate-400 mt-8">
             No hay mensajes aún. Inicia la conversación.
@@ -84,7 +94,18 @@ export function ChatPanel({ messages, status, onSend, currentUserId, disabled }:
                 {msg.createdAt && (
                   <p className={`mt-1 text-right text-xs ${isOwn ? 'text-cyan-200' : 'text-slate-400'}`}>
                     {new Date(msg.createdAt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+                    {msg.deliveryStatus === 'sending' ? ' · Enviando' : ''}
+                    {msg.deliveryStatus === 'failed' ? ' · Falló' : ''}
                   </p>
+                )}
+                {msg.deliveryStatus === 'failed' && onRetry && (
+                  <button
+                    type="button"
+                    onClick={() => onRetry(msg)}
+                    className="mt-2 rounded-lg bg-white/90 px-2 py-1 text-xs font-bold text-red-600"
+                  >
+                    Reintentar
+                  </button>
                 )}
               </div>
             </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { Calendar, ChevronRight, RefreshCcw } from 'lucide-react'
+import { ApiErrorState } from '@/components/api-error-state'
 import { usePatientTimeline } from '@/features/doctor-queue/hooks/use-patient-timeline'
 
 const EVENT_COLORS: Record<string, string> = {
@@ -59,34 +60,42 @@ export function PatientTimelinePanel({ patientId }: { patientId: string }) {
             ))}
           </div>
         )
-        : items.length === 0
+        : timelineQuery.isError
           ? (
-            <div className="rounded-xl bg-slate-50 px-4 py-8 text-center text-sm text-slate-400">
-              Sin eventos de timeline todavía.
-            </div>
+            <ApiErrorState
+              error={timelineQuery.error}
+              title="No se pudo cargar el timeline"
+              onRetry={() => void timelineQuery.refetch()}
+            />
           )
-          : (
-            <div className="space-y-3">
-              {items.map(item => (
-                <div key={item.id} className="flex gap-3 rounded-xl border border-slate-100 p-3">
-                  <div className={`mt-0.5 rounded-full px-2 py-1 text-[10px] font-black ${EVENT_COLORS[item.type] ?? 'bg-slate-100 text-slate-700'}`}>
-                    {item.type.replaceAll('_', ' ')}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-900">{item.title}</p>
-                    <p className="text-xs text-slate-500">{item.subtitle}</p>
-                    <div className="mt-1 flex items-center gap-1 text-[11px] text-slate-400">
-                      <Calendar className="h-3 w-3" />
-                      {formatDate(item.occurredAt)}
+          : items.length === 0
+            ? (
+              <div className="rounded-xl bg-slate-50 px-4 py-8 text-center text-sm text-slate-400">
+                Sin eventos de timeline todavía.
+              </div>
+            )
+            : (
+              <div className="space-y-3">
+                {items.map(item => (
+                  <div key={item.id} className="flex gap-3 rounded-xl border border-slate-100 p-3">
+                    <div className={`mt-0.5 rounded-full px-2 py-1 text-[10px] font-black ${EVENT_COLORS[item.type] ?? 'bg-slate-100 text-slate-700'}`}>
+                      {item.type.replaceAll('_', ' ')}
                     </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+                      <p className="text-xs text-slate-500">{item.subtitle}</p>
+                      <div className="mt-1 flex items-center gap-1 text-[11px] text-slate-400">
+                        <Calendar className="h-3 w-3" />
+                        {formatDate(item.occurredAt)}
+                      </div>
+                    </div>
+                    {item.resourceId && (
+                      <ChevronRight className="mt-3 h-4 w-4 text-slate-300" />
+                    )}
                   </div>
-                  {item.resourceId && (
-                    <ChevronRight className="mt-3 h-4 w-4 text-slate-300" />
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
 
       {timelineQuery.hasNextPage && (
         <button

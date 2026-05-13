@@ -1,6 +1,7 @@
 'use client'
 
 import { Bell, CheckCheck, X } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { useNotifications } from '@/features/notifications/hooks/use-notifications'
 
@@ -21,7 +22,8 @@ function formatRelativeTime(dateStr: string | null): string {
 export function NotificationBell() {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
-  const { data, markRead, markAllRead, isMarkingAll } = useNotifications()
+  const router = useRouter()
+  const { data, markRead, markAllRead, isMarkingAll, connectionStatus } = useNotifications()
 
   const items = data?.items ?? []
   const unreadCount = data?.unreadCount ?? 0
@@ -53,6 +55,9 @@ export function NotificationBell() {
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
+        {connectionStatus === 'disconnected' && (
+          <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border border-white bg-amber-400" />
+        )}
       </button>
 
       {open && (
@@ -60,6 +65,11 @@ export function NotificationBell() {
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
             <h3 className="text-sm font-black text-slate-900">Notificaciones</h3>
+            {connectionStatus !== 'connected' && (
+              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+                Reconectando
+              </span>
+            )}
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
                 <button
@@ -98,8 +108,12 @@ export function NotificationBell() {
                   key={item.id}
                   type="button"
                   onClick={() => {
+                    setOpen(false)
                     if (!item.read) {
                       markRead(item.id)
+                    }
+                    if (item.deepLink) {
+                      router.push(item.deepLink)
                     }
                   }}
                   className={`w-full border-b border-slate-50 px-4 py-3 text-left transition-colors last:border-0 hover:bg-slate-50 ${!item.read ? 'bg-teal-50/40' : ''}`}
@@ -110,6 +124,13 @@ export function NotificationBell() {
                     )}
                     <div className={!item.read ? '' : 'pl-4'}>
                       <p className="text-xs font-medium text-slate-700">{item.message}</p>
+                      {item.resourceId && (
+                        <p className="mt-0.5 text-[11px] font-semibold text-teal-600">
+                          Recurso:
+                          {' '}
+                          {item.resourceId}
+                        </p>
+                      )}
                       <p className="mt-0.5 text-[11px] text-slate-400">
                         {formatRelativeTime(item.createdAt)}
                       </p>

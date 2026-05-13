@@ -26,6 +26,7 @@ describe('envConfig', () => {
       backendOrigin: 'http://localhost:3000',
       baseUrl: 'http://localhost:3000',
       apiBaseUrl: 'http://localhost:3000/v1',
+      socketBaseUrl: 'http://localhost:3000',
       localStorageKeys: {
         refreshToken: 'salud-de-una.refresh-token',
         user: 'salud-de-una.user',
@@ -44,6 +45,19 @@ describe('envConfig', () => {
       backendOrigin: 'https://api.saluddeuna.com',
       baseUrl: 'https://api.saluddeuna.com',
       apiBaseUrl: 'https://api.saluddeuna.com/v1',
+      socketBaseUrl: 'https://api.saluddeuna.com',
+    })
+  })
+
+  it('normalizes a mistakenly configured /v1 suffix to a single API prefix', async () => {
+    mutableEnv.NEXT_PUBLIC_API_BASE_URL = 'https://api.saluddeuna.com/v1/'
+
+    const { default: envConfig } = await importFreshEnvConfig()
+
+    expect(envConfig).toMatchObject({
+      backendOrigin: 'https://api.saluddeuna.com',
+      apiBaseUrl: 'https://api.saluddeuna.com/v1',
+      socketBaseUrl: 'https://api.saluddeuna.com',
     })
   })
 })

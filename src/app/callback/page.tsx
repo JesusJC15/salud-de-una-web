@@ -3,8 +3,8 @@
 import { useAuth0 } from '@auth0/auth0-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
-import { trimTrailingSlashes } from '@/lib/utils'
 import { authService } from '@/services/auth-service'
+import envConfig from '@/utils/config/envConfig'
 
 type CallbackState = 'loading' | 'provisioning' | 'error'
 
@@ -37,7 +37,7 @@ export default function CallbackPage() {
 
       try {
         const audience = process.env.NEXT_PUBLIC_AUTH0_AUDIENCE
-        const baseUrl = trimTrailingSlashes(process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000')
+        const baseUrl = envConfig.apiBaseUrl
 
         const token = await getAccessTokenSilently({ authorizationParams: { audience } })
         const pendingProvision = sessionStorage.getItem('salud-de-una.pending-provision')
@@ -49,7 +49,7 @@ export default function CallbackPage() {
           const payload = JSON.parse(pendingProvision) as { role: string, data: unknown }
           const endpoint = payload.role === 'DOCTOR' ? '/auth/provision/doctor' : '/auth/provision/patient'
 
-          const res = await fetch(`${baseUrl}/v1${endpoint}`, {
+          const res = await fetch(`${baseUrl}${endpoint}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify(payload.data),
@@ -80,7 +80,7 @@ export default function CallbackPage() {
 
           setState('provisioning')
 
-          const provisionRes = await fetch(`${baseUrl}/v1/auth/provision/doctor`, {
+          const provisionRes = await fetch(`${baseUrl}/auth/provision/doctor`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({}),
@@ -115,7 +115,7 @@ export default function CallbackPage() {
 
         // Success — clean up guard, sync session cookie, navigate to app.
         sessionStorage.removeItem(PROVISION_ATTEMPTED_KEY)
-        await authService.syncClientSession(token)
+        await authService.syncSession(token)
         router.replace('/dashboard')
       }
       catch (err) {

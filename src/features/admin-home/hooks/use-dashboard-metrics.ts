@@ -118,11 +118,27 @@ export function useDashboardAlerts() {
 }
 
 export interface ReadinessStatus {
-  status: string
-  mongodb?: string
-  redis?: string
-  ai?: string
-  [key: string]: string | undefined
+  status: 'ready' | 'not_ready'
+  service: string
+  timestamp: string
+  runtimeRole: string
+  checks: {
+    database: {
+      status: 'up' | 'down'
+      detail: string
+    }
+    redis: {
+      status: 'up' | 'down' | 'disabled'
+      detail: string
+      latencyMs: number | null
+      degraded: boolean
+    }
+    ai: {
+      status: 'up' | 'degraded' | 'disabled'
+      detail: string
+      degraded: boolean
+    }
+  }
 }
 
 export function useSystemHealth() {

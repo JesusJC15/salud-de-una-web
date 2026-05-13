@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import toast from 'react-hot-toast'
 import { PriorityBadge } from '@/features/doctor-queue/components/priority-badge'
 import { useAssignConsultation } from '@/features/doctor-queue/hooks/use-assign-consultation'
 import { useConsultationQueue } from '@/features/doctor-queue/hooks/use-consultation-queue'
@@ -25,8 +26,13 @@ export function DoctorQueuePage() {
   const assignMutation = useAssignConsultation()
 
   const handleTakeCase = async (id: string) => {
-    await assignMutation.mutateAsync(id)
-    router.push(`/doctor/consultations/${id}`)
+    try {
+      await assignMutation.mutateAsync(id)
+      router.push(`/doctor/consultations/${id}`)
+    }
+    catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No fue posible tomar el caso')
+    }
   }
 
   if (isLoading) {
@@ -73,7 +79,7 @@ export function DoctorQueuePage() {
           </div>
         )
         : (
-          <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+          <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white shadow-sm">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">

@@ -2,10 +2,28 @@
  * @jest-environment jsdom
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook } from '@testing-library/react'
 import * as React from 'react'
 import { consultationService } from '@/features/doctor-queue/services/consultation-service'
 import { useConsultationQueue } from './use-consultation-queue'
+
+async function waitForCondition(assertion: () => void, timeoutMs = 1000) {
+  const startedAt = Date.now()
+
+  while (true) {
+    try {
+      assertion()
+      return
+    }
+    catch (error) {
+      if (Date.now() - startedAt >= timeoutMs) {
+        throw error
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 10))
+    }
+  }
+}
 
 jest.mock('@/features/doctor-queue/services/consultation-service')
 
@@ -28,7 +46,7 @@ describe('useConsultationQueue', () => {
 
     const { result } = renderHook(() => useConsultationQueue(), { wrapper: makeWrapper() })
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitForCondition(() => expect(result.current.isSuccess).toBe(true))
 
     expect(result.current.data?.items).toEqual(items)
     expect(mockGetQueue).toHaveBeenCalledTimes(1)
@@ -39,6 +57,6 @@ describe('useConsultationQueue', () => {
 
     const { result } = renderHook(() => useConsultationQueue(), { wrapper: makeWrapper() })
 
-    await waitFor(() => expect(result.current.isError).toBe(true))
+    await waitForCondition(() => expect(result.current.isError).toBe(true))
   })
 })

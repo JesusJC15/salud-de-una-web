@@ -1,5 +1,6 @@
 import type { AuthMeResponseDto, AuthMeUser } from '@/types/auth'
 import { trimTrailingSlashes } from '@/lib/utils'
+import envConfig from '@/utils/config/envConfig'
 
 type GetTokenFn = () => Promise<string>
 type LogoutFn = (options: { logoutParams: { returnTo: string } }) => void
@@ -32,7 +33,11 @@ function ssClear(): void {
 }
 
 function getApiBaseUrl() {
-  return trimTrailingSlashes(process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000')
+  return trimTrailingSlashes(envConfig.backendOrigin)
+}
+
+function allowLegacyBrowserStorage() {
+  return process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_ENABLE_LEGACY_SESSION_STORAGE === 'true'
 }
 
 async function syncServerSessionCookie(token: string | null): Promise<void> {
@@ -72,8 +77,12 @@ export function initAuthService(
 
 export const authService = {
   async initLegacySession(accessToken: string, refreshToken: string): Promise<void> {
-    ssSet(SS_ACCESS, accessToken)
-    ssSet(SS_REFRESH, refreshToken)
+    // SECURITY: Token storage in sessionStorage disabled for production
+    // Tokens should only be in httpOnly cookies (BFF) or Auth0 managed
+    if (allowLegacyBrowserStorage()) {
+      ssSet(SS_ACCESS, accessToken)
+      ssSet(SS_REFRESH, refreshToken)
+    }
     await syncServerSessionCookie(accessToken)
     _lastSyncedAccessToken = accessToken
   },
@@ -81,6 +90,10 @@ export const authService = {
   async syncClientSession(token: string | null): Promise<void> {
     await syncServerSessionCookie(token)
     _lastSyncedAccessToken = token
+  },
+
+  async syncSession(token: string | null): Promise<void> {
+    await this.syncClientSession(token)
   },
 
   async getAccessToken(): Promise<string | null> {
@@ -100,7 +113,23 @@ export const authService = {
       }
     }
 
-    const legacyToken = ssGet(SS_ACCESS)
+    // Try to obtain token from server-side httpOnly cookie (BFF) — same-origin GET
+    try {
+      const res = await fetch(SESSION_ENDPOINT, { method: 'GET', credentials: 'same-origin' })
+      if (res.ok && res.status !== 204) {
+        const data = await res.json() as { accessToken?: string }
+        const serverToken = data.accessToken ?? null
+        if (serverToken) {
+          _lastSyncedAccessToken = serverToken
+          return serverToken
+        }
+      }
+    }
+    catch {
+      // fall through to legacy
+    }
+
+    const legacyToken = allowLegacyBrowserStorage() ? ssGet(SS_ACCESS) : null
     if (legacyToken && legacyToken !== _lastSyncedAccessToken) {
       _lastSyncedAccessToken = legacyToken
       void syncServerSessionCookie(legacyToken)
@@ -117,6 +146,10 @@ export const authService = {
     }
 
     const refreshToken = ssGet(SS_REFRESH)
+    // In production, don't use sessionStorage refresh token
+    if (!allowLegacyBrowserStorage() && !refreshToken) {
+      return null
+    }
     if (!refreshToken)
       return null
 
@@ -132,8 +165,11 @@ export const authService = {
         return null
       }
       const data = await res.json() as { accessToken: string, refreshToken?: string }
-      ssSet(SS_ACCESS, data.accessToken)
-      ssSet(SS_REFRESH, data.refreshToken ?? refreshToken)
+      // Only store in sessionStorage in development
+      if (allowLegacyBrowserStorage()) {
+        ssSet(SS_ACCESS, data.accessToken)
+        ssSet(SS_REFRESH, data.refreshToken ?? refreshToken)
+      }
       await syncServerSessionCookie(data.accessToken)
       _lastSyncedAccessToken = data.accessToken
       return { accessToken: data.accessToken }
@@ -148,11 +184,21 @@ export const authService = {
   getRefreshToken(): string | null {
     if (_isAuthenticated)
       return '__auth0_managed__'
+    // In production, don't return sessionStorage tokens
+    if (!allowLegacyBrowserStorage()) {
+      return null
+    }
     return ssGet(SS_REFRESH)
   },
 
   isAuthenticated(): boolean {
-    return _isAuthenticated || ssGet(SS_ACCESS) !== null
+    if (_isAuthenticated)
+      return true
+    // In production, only trust Auth0 authentication state
+    if (!allowLegacyBrowserStorage()) {
+      return false
+    }
+    return ssGet(SS_ACCESS) !== null
   },
 
   async getCurrentUser(tokenOverride?: string | null): Promise<AuthMeUser | null> {

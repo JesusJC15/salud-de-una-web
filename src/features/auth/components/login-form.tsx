@@ -12,12 +12,13 @@ import { useLoginStaff } from '@/features/auth/hooks/use-login-staff'
 export default function LoginForm() {
   const { loginWithRedirect, isLoading: auth0Loading } = useAuth0()
   const { login, loading: legacyLoading, error, clearError } = useLoginStaff()
+  const auth0Disabled = process.env.NEXT_PUBLIC_ENABLE_E2E_BACKEND_MOCK === 'true'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
-  const isLoading = legacyLoading || auth0Loading
+  const isLoading = legacyLoading || (!auth0Disabled && auth0Loading)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -138,11 +139,11 @@ export default function LoginForm() {
         <Button
           type="button"
           onClick={handleAuth0}
-          disabled={isLoading}
+          disabled={isLoading || auth0Disabled}
           variant="outline"
           className="w-full h-12 rounded-xl border-slate-200 bg-white font-semibold text-slate-700 hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {auth0Loading
+          {auth0Loading && !auth0Disabled
             ? (
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />

@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SaludDeUna Web Staff Portal
 
-## Getting Started
+Portal web para operación clínica y administrativa de SaludDeUna. Este frontend cubre roles `ADMIN` y `DOCTOR`; los flujos de paciente, triage, checkout y followups no forman parte del alcance web actual.
 
-First, run the development server:
+## Requisitos
+
+- Node.js 22+
+- Backend disponible en un origen sin sufijo `/v1`
+- Variables de entorno basadas en `.env.example`
+
+## Variables principales
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+NEXT_PUBLIC_API_BASE_URL=http://localhost:3000
+NEXT_PUBLIC_AUTH0_DOMAIN=your-tenant.us.auth0.com
+NEXT_PUBLIC_AUTH0_CLIENT_ID=your-web-spa-client-id
+NEXT_PUBLIC_AUTH0_AUDIENCE=https://api.salud-de-una.com
+NEXT_PUBLIC_AUTH0_REDIRECT_URI=http://localhost:3001/callback
+NEXT_PUBLIC_ENABLE_LEGACY_SESSION_STORAGE=false
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`NEXT_PUBLIC_API_BASE_URL` debe ser el origen del backend sin `/v1`. La app deriva internamente:
 
-You can start editing the page by modifying `src/app/page.tsx`. The page auto-updates as you edit the file.
+- API REST: `${NEXT_PUBLIC_API_BASE_URL}/v1`
+- Socket.IO: `${NEXT_PUBLIC_API_BASE_URL}`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Inter](https://vercel.com/font), a new font family for Vercel.
+## Comandos
 
-## Learn More
+```bash
+npm run dev          # Next.js en http://localhost:3001
+npm run check:types  # TypeScript
+npm run lint         # ESLint
+npm run test         # Jest unit tests
+npm run build        # Genera OpenAPI types y build prod
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Alcance funcional
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Admin: dashboard operativo, usuarios, doctores/REThUS, billing, reports, knowledge/RAG y prompts IA.
+- Doctor: home, disponibilidad, cola, detalle de consulta, chat clínico, resumen IA, historial y timeline paciente.
+- Auth: login staff legacy con JWT backend y Auth0 como proveedor soportado.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Notas de piloto
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Los errores API muestran correlation IDs cuando el backend los provee.
+- El chat usa ack de Socket.IO para distinguir mensajes enviados, fallidos y reintentables.
+- La observabilidad frontend usa logging propio vía `/api/client-events`; no se deben enviar PII, tokens ni contenido clínico.

@@ -3,19 +3,18 @@
 import type { Socket } from 'socket.io-client'
 import type { NotificationListItem, NotificationsResponseDto } from '@/types/notification'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { io } from 'socket.io-client'
 import { apiClient } from '@/api/api-client'
-import { trimTrailingSlashes } from '@/lib/utils'
 import { authService } from '@/services/auth-service'
+import envConfig from '@/utils/config/envConfig'
 
-const WS_BASE_URL = trimTrailingSlashes(
-  (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000').replace(/\/v1$/, ''),
-)
+const WS_BASE_URL = envConfig.socketBaseUrl
 
 export function useNotifications() {
   const queryClient = useQueryClient()
   const socketRef = useRef<Socket | null>(null)
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected')
 
   const query = useQuery<NotificationsResponseDto>({
     queryKey: ['notifications'],
@@ -47,12 +46,32 @@ export function useNotifications() {
 
       socketRef.current = socket
 
+      setConnectionStatus('connecting')
+
+      socket.on('connect', () => {
+        if (!mounted)
+          return
+        setConnectionStatus('connected')
+        void queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      })
+
+      socket.on('disconnect', () => {
+        if (mounted)
+          setConnectionStatus('disconnected')
+      })
+
       socket.on('notification:new', (notification: NotificationListItem) => {
         if (!mounted)
           return
         queryClient.setQueryData<NotificationsResponseDto>(['notifications'], (old) => {
           if (!old)
             return old
+          if (old.items.some(existing => existing.id === notification.id)) {
+            return {
+              ...old,
+              items: old.items.map(existing => existing.id === notification.id ? notification : existing),
+            }
+          }
           return {
             items: [notification, ...old.items].slice(0, 20),
             unreadCount: old.unreadCount + 1,
@@ -67,6 +86,7 @@ export function useNotifications() {
       mounted = false
       socketRef.current?.disconnect()
       socketRef.current = null
+      setConnectionStatus('disconnected')
     }
   }, [queryClient])
 
@@ -86,6 +106,7 @@ export function useNotifications() {
     data: query.data,
     isLoading: query.isLoading,
     isError: query.isError,
+    connectionStatus,
     markRead: markReadMutation.mutate,
     markAllRead: markAllReadMutation.mutate,
     isMarkingAll: markAllReadMutation.isPending,

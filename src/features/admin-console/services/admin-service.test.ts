@@ -36,6 +36,8 @@ describe('adminService', () => {
     patchMock.mockResolvedValue({ data: { ok: true } })
     getAccessToken.mockResolvedValue('admin-token')
     globalThis.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
       text: jest.fn().mockResolvedValue('csv-content'),
     }) as unknown as typeof fetch
   })
