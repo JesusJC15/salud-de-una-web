@@ -3,7 +3,9 @@
 import type { ReactNode } from 'react'
 import { Auth0Provider, useAuth0 } from '@auth0/auth0-react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useReportWebVitals } from 'next/web-vitals'
 import { useEffect, useState } from 'react'
+import { clientLogger } from '@/lib/client-logger'
 import { authService, initAuthService } from '@/services/auth-service'
 
 // Wires the Auth0 SDK to the authService singleton so api-client.ts can call
@@ -48,6 +50,24 @@ function AuthServiceInitializer() {
   return null
 }
 
+function WebVitalsReporter() {
+  useReportWebVitals((metric) => {
+    void clientLogger.log({
+      level: 'info',
+      message: 'web-vital',
+      component: 'WebVitalsReporter',
+      metadata: {
+        id: metric.id,
+        name: metric.name,
+        rating: metric.rating,
+        value: Math.round(metric.value),
+      },
+    })
+  })
+
+  return null
+}
+
 export function Auth0ClientProvider({ children }: { children: ReactNode }) {
   const domain = process.env.NEXT_PUBLIC_AUTH0_DOMAIN ?? ''
   const clientId = process.env.NEXT_PUBLIC_AUTH0_CLIENT_ID ?? ''
@@ -63,6 +83,7 @@ export function Auth0ClientProvider({ children }: { children: ReactNode }) {
         staleTime: 30_000,
         refetchOnWindowFocus: false,
         refetchOnReconnect: false,
+        refetchIntervalInBackground: false,
       },
     },
   }))
@@ -81,6 +102,7 @@ export function Auth0ClientProvider({ children }: { children: ReactNode }) {
         cacheLocation="memory"
       >
         <AuthServiceInitializer />
+        <WebVitalsReporter />
         {children}
       </Auth0Provider>
     </QueryClientProvider>

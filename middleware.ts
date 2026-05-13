@@ -9,6 +9,11 @@ function trimTrailingSlashes(url: string): string {
   return end === url.length ? url : url.slice(0, end)
 }
 
+function normalizeBackendOrigin(value: string): string {
+  const normalized = trimTrailingSlashes(value)
+  return normalized.endsWith('/v1') ? normalized.slice(0, -3) : normalized
+}
+
 function applySecurityHeaders(res: NextResponse) {
   res.headers.set('X-Frame-Options', 'DENY')
   res.headers.set('X-Content-Type-Options', 'nosniff')
@@ -19,7 +24,7 @@ function applySecurityHeaders(res: NextResponse) {
   res.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload')
   const auth0Domain = process.env.NEXT_PUBLIC_AUTH0_DOMAIN ?? ''
   const auth0Origin = auth0Domain ? `https://${auth0Domain}` : ''
-  const apiOrigin = trimTrailingSlashes(process.env.NEXT_PUBLIC_API_BASE_URL ?? '')
+  const apiOrigin = normalizeBackendOrigin(process.env.NEXT_PUBLIC_API_BASE_URL ?? '')
   res.headers.set(
     'Content-Security-Policy',
     [
@@ -75,7 +80,7 @@ async function validateToken(
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
-  const apiBaseUrl = trimTrailingSlashes(process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000')
+  const backendOrigin = normalizeBackendOrigin(process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000')
 
   // ── Doctor route protection ──────────────────────────────────────────────
   if (pathname.startsWith('/doctor')) {
@@ -89,7 +94,7 @@ export async function middleware(req: NextRequest) {
       return redirect
     }
 
-    const validation = await validateToken(accessToken, apiBaseUrl)
+    const validation = await validateToken(accessToken, backendOrigin)
 
     if (validation.kind === 'invalid') {
       const loginUrl = new URL('/login', req.url)
@@ -131,7 +136,7 @@ export async function middleware(req: NextRequest) {
       return redirect
     }
 
-    const validation = await validateToken(accessToken, apiBaseUrl)
+    const validation = await validateToken(accessToken, backendOrigin)
 
     if (validation.kind === 'invalid') {
       const loginUrl = new URL('/login', req.url)

@@ -115,6 +115,9 @@ export function ClinicalSummaryPanel({
 
         {!isGenerating && summary && (
           <div className="space-y-4">
+            <div className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800">
+              Resumen generado como apoyo clínico. Debe ser revisado y validado por el médico antes de tomar decisiones.
+            </div>
             <p className="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap">{summary}</p>
             {citations?.length
               ? (

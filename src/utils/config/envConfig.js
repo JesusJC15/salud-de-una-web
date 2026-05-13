@@ -11,10 +11,17 @@ function normalizeBaseUrl(value) {
   return trimTrailingSlashes(value)
 }
 
+function stripApiPrefix(value) {
+  const normalized = normalizeBaseUrl(value)
+  return normalized.endsWith(API_PREFIX)
+    ? normalized.slice(0, -API_PREFIX.length)
+    : normalized
+}
+
 // process.env.NEXT_PUBLIC_* is inlined at build time by Next.js for both
 // server and client bundles. Using `import { env } from 'node:process'`
 // bypasses that inlining and resolves to undefined in browser bundles.
-const backendOrigin = normalizeBaseUrl(
+const backendOrigin = stripApiPrefix(
   process.env.NEXT_PUBLIC_API_BASE_URL
   || 'http://localhost:3000',
 )
@@ -24,6 +31,7 @@ const config = {
   backendOrigin,
   baseUrl: backendOrigin,
   apiBaseUrl: `${backendOrigin}${API_PREFIX}`,
+  socketBaseUrl: backendOrigin,
   localStorageKeys: {
     refreshToken: 'salud-de-una.refresh-token',
     user: 'salud-de-una.user',

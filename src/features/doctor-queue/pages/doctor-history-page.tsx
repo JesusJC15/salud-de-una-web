@@ -98,7 +98,7 @@ export function DoctorHistoryPage() {
         )}
 
         {!isLoading && !isError && (data?.items.length ?? 0) > 0 && (
-          <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+          <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white shadow-sm">
             <table className="w-full text-sm">
               <thead className="border-b border-slate-100 bg-slate-50">
                 <tr>

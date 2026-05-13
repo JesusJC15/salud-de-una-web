@@ -21,6 +21,7 @@ export function DoctorConsultationPage({ consultationId }: Props) {
   const [doctorId, setDoctorId] = useState<string | null>(null)
   const [baselineSymptomSeverity, setBaselineSymptomSeverity] = useState(5)
   const [redFlagsConfirmed, setRedFlagsConfirmed] = useState(false)
+  const [closeConfirmationOpen, setCloseConfirmationOpen] = useState(false)
 
   const { data: consultation, isLoading } = useConsultationDetail(consultationId)
   const generateSummaryMutation = useGenerateSummary(consultationId)
@@ -28,6 +29,7 @@ export function DoctorConsultationPage({ consultationId }: Props) {
   const summaryFeedbackMutation = useSummaryFeedback(consultationId)
   const { messages, status: socketStatus, sendMessage } = useChatSocket(
     consultation?.status === 'IN_ATTENTION' ? consultationId : null,
+    doctorId,
   )
 
   useEffect(() => {
@@ -93,7 +95,7 @@ export function DoctorConsultationPage({ consultationId }: Props) {
         </div>
         {!isClosed && consultation.status === 'IN_ATTENTION' && (
           <button
-            onClick={() => void handleClose()}
+            onClick={() => setCloseConfirmationOpen(true)}
             disabled={closeConsultationMutation.isPending}
             className="rounded-lg bg-red-50 border border-red-200 px-3 py-1.5 text-sm font-bold text-red-600 hover:bg-red-100 disabled:opacity-50"
           >
@@ -142,6 +144,7 @@ export function DoctorConsultationPage({ consultationId }: Props) {
             messages={messages}
             status={socketStatus}
             onSend={sendMessage}
+            onRetry={message => sendMessage(message.content, message.clientMessageId)}
             currentUserId={doctorId ?? ''}
             disabled={isClosed}
           />
@@ -169,6 +172,44 @@ export function DoctorConsultationPage({ consultationId }: Props) {
           <PatientTimelinePanel patientId={consultation.patientId} />
         </div>
       </div>
+
+      {closeConfirmationOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
+            <h2 className="text-lg font-bold text-slate-900">Confirmar cierre clínico</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Se cerrará la consulta con severidad base
+              {' '}
+              <strong>
+                {baselineSymptomSeverity}
+                /10
+              </strong>
+              {' '}
+              y señales de alarma
+              {' '}
+              <strong>{redFlagsConfirmed ? 'confirmadas' : 'no confirmadas'}</strong>
+              .
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setCloseConfirmationOpen(false)}
+                className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleClose()}
+                disabled={closeConsultationMutation.isPending}
+                className="rounded-lg bg-red-600 px-3 py-2 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                Confirmar cierre
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

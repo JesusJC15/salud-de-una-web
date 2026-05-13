@@ -92,10 +92,12 @@ describe('authService (Auth0 adapter)', () => {
     })
     mockGetToken.mockRejectedValue(new Error('Login required'))
 
-    const { authService, initAuthService } = await importFreshAuthService()
-    initAuthService(mockGetToken, mockLogout, false)
+    await withNodeEnv('development', async () => {
+      const { authService, initAuthService } = await importFreshAuthService()
+      initAuthService(mockGetToken, mockLogout, false)
 
-    await expect(authService.getAccessToken()).resolves.toBe('legacy-access')
+      await expect(authService.getAccessToken()).resolves.toBe('legacy-access')
+    })
   })
 
   it('returns the Auth0 token when authenticated', async () => {

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { Component } from 'react'
+import { clientLogger } from '@/lib/client-logger'
 
 interface Props {
   children: ReactNode
@@ -18,6 +19,16 @@ export class ErrorBoundary extends Component<Props, State> {
 
   static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error }
+  }
+
+  override componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    void clientLogger.error('React error boundary captured an error', {
+      component: 'ErrorBoundary',
+      metadata: {
+        errorName: error.name,
+        componentStack: errorInfo.componentStack,
+      },
+    })
   }
 
   override render() {

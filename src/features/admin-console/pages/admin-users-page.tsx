@@ -99,7 +99,7 @@ export function AdminUsersPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+      <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white shadow-sm">
         {usersQuery.isLoading
           ? (
             <div className="divide-y divide-slate-50">

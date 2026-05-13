@@ -1,3 +1,4 @@
+import type { RethusVerifyFormValues } from '../validators/rethus-verify-schema'
 import type {
   AiPromptItem,
   BillingPrice,
@@ -60,7 +61,7 @@ export const adminService = {
     return res.data
   },
 
-  async verifyDoctor(doctorId: string, input: { action: 'APPROVE' | 'REJECT', notes?: string, evidenceUrl?: string }) {
+  async verifyDoctor(doctorId: string, input: { action: 'APPROVE' | 'REJECT', notes?: string, evidenceUrl?: string } | RethusVerifyFormValues) {
     const res = await apiClient('').post(`admin/doctors/${doctorId}/rethus-verify`, input)
     return res.data
   },
@@ -87,6 +88,10 @@ export const adminService = {
         },
       },
     )
+
+    if (!res.ok) {
+      throw new Error(`No se pudo exportar el CSV (HTTP ${res.status})`)
+    }
 
     return res.text()
   },

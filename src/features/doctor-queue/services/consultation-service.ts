@@ -45,8 +45,10 @@ export interface ConsultationDetail extends QueueItem {
 }
 
 export interface ChatMessage {
+  clientMessageId?: string
   id: string
   consultationId: string
+  deliveryStatus?: 'sending' | 'sent' | 'failed'
   senderId: string
   senderRole: 'PATIENT' | 'DOCTOR'
   content: string

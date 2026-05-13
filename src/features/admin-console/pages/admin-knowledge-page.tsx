@@ -5,6 +5,12 @@ import { AlertTriangle, CheckCircle2, DatabaseZap, RefreshCw, ShieldAlert } from
 import { useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { adminService } from '@/features/admin-console/services/admin-service'
+import {
+  knowledgeFileDocumentSchema,
+  knowledgeSourceSchema,
+  knowledgeTextDocumentSchema,
+  knowledgeUrlDocumentSchema,
+} from '@/features/admin-console/validators/knowledge-schemas'
 
 const SOURCE_TYPE_OPTIONS = [
   'GUIDELINE',
@@ -180,7 +186,7 @@ export function AdminKnowledgePage() {
   }
 
   const createSourceMutation = useMutation({
-    mutationFn: () => adminService.createKnowledgeSource(sourceForm),
+    mutationFn: () => adminService.createKnowledgeSource(knowledgeSourceSchema.parse(sourceForm)),
     onSuccess: async () => {
       toast.success('Fuente creada')
       setSourceForm({
@@ -193,11 +199,11 @@ export function AdminKnowledgePage() {
       })
       await invalidateKnowledge()
     },
-    onError: () => toast.error('No fue posible crear la fuente'),
+    onError: error => toast.error(error instanceof Error ? error.message : 'No fue posible crear la fuente'),
   })
 
   const createTextDocumentMutation = useMutation({
-    mutationFn: () => adminService.createKnowledgeTextDocument(textForm),
+    mutationFn: () => adminService.createKnowledgeTextDocument(knowledgeTextDocumentSchema.parse(textForm)),
     onSuccess: async () => {
       toast.success('Documento enviado a ingesta')
       setTextForm({
@@ -216,17 +222,15 @@ export function AdminKnowledgePage() {
       })
       await invalidateKnowledge()
     },
-    onError: () => toast.error('No fue posible crear el documento textual'),
+    onError: error => toast.error(error instanceof Error ? error.message : 'No fue posible crear el documento textual'),
   })
 
   const uploadFileDocumentMutation = useMutation({
     mutationFn: () => {
-      if (!fileForm.file)
-        throw new Error('file-required')
-      return adminService.uploadKnowledgeFileDocument({
+      return adminService.uploadKnowledgeFileDocument(knowledgeFileDocumentSchema.parse({
         ...fileForm,
         file: fileForm.file,
-      })
+      }))
     },
     onSuccess: async () => {
       toast.success('Archivo enviado a ingesta')
@@ -246,11 +250,11 @@ export function AdminKnowledgePage() {
       })
       await invalidateKnowledge()
     },
-    onError: () => toast.error('No fue posible cargar el archivo'),
+    onError: error => toast.error(error instanceof Error ? error.message : 'No fue posible cargar el archivo'),
   })
 
   const ingestUrlMutation = useMutation({
-    mutationFn: () => adminService.ingestKnowledgeUrl(urlForm),
+    mutationFn: () => adminService.ingestKnowledgeUrl(knowledgeUrlDocumentSchema.parse(urlForm)),
     onSuccess: async () => {
       toast.success('Documento por URL enviado a ingesta')
       setUrlForm({
@@ -265,7 +269,7 @@ export function AdminKnowledgePage() {
       })
       await invalidateKnowledge()
     },
-    onError: () => toast.error('No fue posible ingerir la URL'),
+    onError: error => toast.error(error instanceof Error ? error.message : 'No fue posible ingerir la URL'),
   })
 
   const reviewMutation = useMutation({
@@ -287,7 +291,7 @@ export function AdminKnowledgePage() {
     onError: () => toast.error('No fue posible reprocesar el documento'),
   })
 
-  const documents = documentsQuery.data?.items ?? []
+  const documents = useMemo(() => documentsQuery.data?.items ?? [], [documentsQuery.data?.items])
   const selectedDocument = useMemo(
     () => documents.find(document => document.id === selectedDocumentId) ?? null,
     [documents, selectedDocumentId],

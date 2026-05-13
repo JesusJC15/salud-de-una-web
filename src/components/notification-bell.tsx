@@ -23,7 +23,7 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const router = useRouter()
-  const { data, markRead, markAllRead, isMarkingAll } = useNotifications()
+  const { data, markRead, markAllRead, isMarkingAll, connectionStatus } = useNotifications()
 
   const items = data?.items ?? []
   const unreadCount = data?.unreadCount ?? 0
@@ -55,6 +55,9 @@ export function NotificationBell() {
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
+        {connectionStatus === 'disconnected' && (
+          <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border border-white bg-amber-400" />
+        )}
       </button>
 
       {open && (
@@ -62,6 +65,11 @@ export function NotificationBell() {
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
             <h3 className="text-sm font-black text-slate-900">Notificaciones</h3>
+            {connectionStatus !== 'connected' && (
+              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+                Reconectando
+              </span>
+            )}
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
                 <button

@@ -43,7 +43,7 @@ export function useLoginStaff() {
 
       const data = await res.json() as LoginStaffResponse
       await authService.initLegacySession(data.accessToken, data.refreshToken)
-      router.push('/dashboard')
+      router.push(data.user.role === 'ADMIN' ? '/admin' : '/doctor')
     }
     catch (err) {
       setError(err instanceof Error ? err.message : 'No fue posible iniciar sesión')

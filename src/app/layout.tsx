@@ -16,7 +16,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={cn('font-sans')}>
+    <html lang="es-CO" className={cn('font-sans')}>
       <body className="antialiased">
         <Auth0ClientProvider>
           <Toaster position="top-right" toastOptions={{ duration: 4000 }} />

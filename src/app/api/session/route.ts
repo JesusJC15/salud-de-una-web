@@ -44,7 +44,7 @@ export async function GET() {
   const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value
 
   if (!accessToken) {
-    return NextResponse.json({}, { status: 204 })
+    return new Response(null, { status: 204 })
   }
 
   return NextResponse.json({ accessToken })

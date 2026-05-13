@@ -1,5 +1,6 @@
 import type { AuthMeResponseDto, AuthMeUser } from '@/types/auth'
 import { trimTrailingSlashes } from '@/lib/utils'
+import envConfig from '@/utils/config/envConfig'
 
 type GetTokenFn = () => Promise<string>
 type LogoutFn = (options: { logoutParams: { returnTo: string } }) => void
@@ -32,7 +33,11 @@ function ssClear(): void {
 }
 
 function getApiBaseUrl() {
-  return trimTrailingSlashes(process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000')
+  return trimTrailingSlashes(envConfig.backendOrigin)
+}
+
+function allowLegacyBrowserStorage() {
+  return process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_ENABLE_LEGACY_SESSION_STORAGE === 'true'
 }
 
 async function syncServerSessionCookie(token: string | null): Promise<void> {
@@ -74,7 +79,7 @@ export const authService = {
   async initLegacySession(accessToken: string, refreshToken: string): Promise<void> {
     // SECURITY: Token storage in sessionStorage disabled for production
     // Tokens should only be in httpOnly cookies (BFF) or Auth0 managed
-    if (process.env.NODE_ENV === 'development') {
+    if (allowLegacyBrowserStorage()) {
       ssSet(SS_ACCESS, accessToken)
       ssSet(SS_REFRESH, refreshToken)
     }
@@ -85,6 +90,10 @@ export const authService = {
   async syncClientSession(token: string | null): Promise<void> {
     await syncServerSessionCookie(token)
     _lastSyncedAccessToken = token
+  },
+
+  async syncSession(token: string | null): Promise<void> {
+    await this.syncClientSession(token)
   },
 
   async getAccessToken(): Promise<string | null> {
@@ -113,10 +122,6 @@ export const authService = {
         if (serverToken) {
           _lastSyncedAccessToken = serverToken
           return serverToken
-          // FALLBACK: Only use sessionStorage in development mode
-          if (process.env.NODE_ENV !== 'development') {
-            return null
-          }
         }
       }
     }
@@ -124,7 +129,7 @@ export const authService = {
       // fall through to legacy
     }
 
-    const legacyToken = ssGet(SS_ACCESS)
+    const legacyToken = allowLegacyBrowserStorage() ? ssGet(SS_ACCESS) : null
     if (legacyToken && legacyToken !== _lastSyncedAccessToken) {
       _lastSyncedAccessToken = legacyToken
       void syncServerSessionCookie(legacyToken)
@@ -142,7 +147,7 @@ export const authService = {
 
     const refreshToken = ssGet(SS_REFRESH)
     // In production, don't use sessionStorage refresh token
-    if (process.env.NODE_ENV !== 'development' && !refreshToken) {
+    if (!allowLegacyBrowserStorage() && !refreshToken) {
       return null
     }
     if (!refreshToken)
@@ -161,7 +166,7 @@ export const authService = {
       }
       const data = await res.json() as { accessToken: string, refreshToken?: string }
       // Only store in sessionStorage in development
-      if (process.env.NODE_ENV === 'development') {
+      if (allowLegacyBrowserStorage()) {
         ssSet(SS_ACCESS, data.accessToken)
         ssSet(SS_REFRESH, data.refreshToken ?? refreshToken)
       }
@@ -180,7 +185,7 @@ export const authService = {
     if (_isAuthenticated)
       return '__auth0_managed__'
     // In production, don't return sessionStorage tokens
-    if (process.env.NODE_ENV !== 'development') {
+    if (!allowLegacyBrowserStorage()) {
       return null
     }
     return ssGet(SS_REFRESH)
@@ -190,7 +195,7 @@ export const authService = {
     if (_isAuthenticated)
       return true
     // In production, only trust Auth0 authentication state
-    if (process.env.NODE_ENV !== 'development') {
+    if (!allowLegacyBrowserStorage()) {
       return false
     }
     return ssGet(SS_ACCESS) !== null
