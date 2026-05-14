@@ -34,11 +34,10 @@ export function useStaffSession(allowedRoles?: string[]) {
       return
     }
 
-    if (!auth0IsAuthenticated && !authService.isAuthenticated()) {
-      setState({ status: 'unauthenticated', user: null })
-      return
-    }
-
+    // Do NOT use authService.isAuthenticated() as a gate here.
+    // In production, it returns false for legacy sessions because sessionStorage
+    // is disabled — but getCurrentUser() correctly reads the httpOnly BFF cookie
+    // via GET /api/session, which is the source of truth for legacy tokens.
     setState({ status: 'checking', user: null })
 
     try {
