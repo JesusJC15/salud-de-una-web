@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { PriorityBadge } from '@/features/doctor-queue/components/priority-badge'
 import { useAssignConsultation } from '@/features/doctor-queue/hooks/use-assign-consultation'
 import { useConsultationQueue } from '@/features/doctor-queue/hooks/use-consultation-queue'
+import { translateConsultationStatus } from '@/utils/consultation-status-labels'
 import { translateSpecialty } from '@/utils/specialty-labels'
 
 function timeAgo(dateStr: string): string {
@@ -99,7 +100,7 @@ export function DoctorQueuePage() {
                     <td className="px-4 py-3 font-medium text-slate-900">
                       {translateSpecialty(item.specialty)}
                     </td>
-                    <td className="px-4 py-3 text-slate-500">{item.status}</td>
+                    <td className="px-4 py-3 text-slate-500">{translateConsultationStatus(item.status)}</td>
                     <td className="px-4 py-3 text-slate-500">
                       {item.createdAt
                         ? timeAgo(item.createdAt)

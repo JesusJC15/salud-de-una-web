@@ -79,6 +79,20 @@ export function AdminKnowledgePage() {
     country: 'CO',
   })
 
+  const [sourceErrors, setSourceErrors] = useState<Record<string, string>>({})
+  const [fileErrors, setFileErrors] = useState<Record<string, string>>({})
+  const [textErrors, setTextErrors] = useState<Record<string, string>>({})
+  const [urlErrors, setUrlErrors] = useState<Record<string, string>>({})
+
+  function extractFieldErrors(result: { success: boolean, error?: { flatten: () => { fieldErrors: Record<string, string[] | undefined> } } }): Record<string, string> {
+    if (result.success || !result.error)
+      return {}
+    return Object.fromEntries(
+      Object.entries(result.error.flatten().fieldErrors)
+        .map(([k, v]) => [k, Array.isArray(v) ? (v[0] ?? '') : '']),
+    )
+  }
+
   const sourcesQuery = useQuery({
     queryKey: [
       'admin',
@@ -370,17 +384,37 @@ export function AdminKnowledgePage() {
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 <input value={sourceForm.name} onChange={event => setSourceForm(prev => ({ ...prev, name: event.target.value }))} placeholder="Nombre de la fuente" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
                 <input value={sourceForm.authority} onChange={event => setSourceForm(prev => ({ ...prev, authority: event.target.value }))} placeholder="Autoridad" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-                <select value={sourceForm.sourceType} onChange={event => setSourceForm(prev => ({ ...prev, sourceType: event.target.value }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                <select aria-label="Tipo de fuente" value={sourceForm.sourceType} onChange={event => setSourceForm(prev => ({ ...prev, sourceType: event.target.value }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
                   {SOURCE_TYPE_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
                 </select>
                 <input value={sourceForm.baseUrl} onChange={event => setSourceForm(prev => ({ ...prev, baseUrl: event.target.value }))} placeholder="Base URL (opcional)" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
                 <input value={sourceForm.country} onChange={event => setSourceForm(prev => ({ ...prev, country: event.target.value }))} placeholder="País" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
                 <input value={sourceForm.notes} onChange={event => setSourceForm(prev => ({ ...prev, notes: event.target.value }))} placeholder="Notas" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
               </div>
+              {Object.keys(sourceErrors).length > 0 && (
+                <div className="mt-3 rounded-xl bg-red-50 px-4 py-3">
+                  <p className="mb-1 text-xs font-bold text-red-700">Corregí los siguientes campos:</p>
+                  <ul className="list-disc space-y-0.5 pl-4">
+                    {Object.values(sourceErrors).map((msg, i) => (
+                      // eslint-disable-next-line react/no-array-index-key
+                      <li key={i} className="text-xs text-red-600">{msg}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <button
                 type="button"
-                onClick={() => createSourceMutation.mutate()}
-                disabled={createSourceMutation.isPending || !sourceForm.name || !sourceForm.authority}
+                onClick={() => {
+                  const result = knowledgeSourceSchema.safeParse(sourceForm)
+                  const errs = extractFieldErrors(result)
+                  if (Object.keys(errs).length > 0) {
+                    setSourceErrors(errs)
+                    return
+                  }
+                  setSourceErrors({})
+                  createSourceMutation.mutate()
+                }}
+                disabled={createSourceMutation.isPending}
                 className="mt-4 rounded-xl bg-teal-600 px-4 py-2 text-sm font-bold text-white hover:bg-teal-700 disabled:opacity-50"
               >
                 Crear fuente
@@ -392,10 +426,10 @@ export function AdminKnowledgePage() {
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 <input value={fileForm.title} onChange={event => setFileForm(prev => ({ ...prev, title: event.target.value }))} placeholder="Título" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
                 <input value={fileForm.authority} onChange={event => setFileForm(prev => ({ ...prev, authority: event.target.value }))} placeholder="Autoridad" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-                <select value={fileForm.sourceType} onChange={event => setFileForm(prev => ({ ...prev, sourceType: event.target.value }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                <select aria-label="Tipo de fuente" value={fileForm.sourceType} onChange={event => setFileForm(prev => ({ ...prev, sourceType: event.target.value }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
                   {SOURCE_TYPE_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
                 </select>
-                <select value={fileForm.specialty} onChange={event => setFileForm(prev => ({ ...prev, specialty: event.target.value }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                <select aria-label="Especialidad" value={fileForm.specialty} onChange={event => setFileForm(prev => ({ ...prev, specialty: event.target.value }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
                   {SPECIALTY_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
                 </select>
                 <input value={fileForm.useCases} onChange={event => setFileForm(prev => ({ ...prev, useCases: event.target.value }))} placeholder="Use cases (coma)" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
@@ -419,10 +453,30 @@ export function AdminKnowledgePage() {
                   onChange={event => setFileForm(prev => ({ ...prev, file: event.target.files?.[0] ?? null }))}
                 />
               </label>
+              {Object.keys(fileErrors).length > 0 && (
+                <div className="mt-3 rounded-xl bg-red-50 px-4 py-3">
+                  <p className="mb-1 text-xs font-bold text-red-700">Corregí los siguientes campos:</p>
+                  <ul className="list-disc space-y-0.5 pl-4">
+                    {Object.values(fileErrors).map((msg, i) => (
+                      // eslint-disable-next-line react/no-array-index-key
+                      <li key={i} className="text-xs text-red-600">{msg}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <button
                 type="button"
-                onClick={() => uploadFileDocumentMutation.mutate()}
-                disabled={uploadFileDocumentMutation.isPending || !fileForm.title || !fileForm.authority || !fileForm.file}
+                onClick={() => {
+                  const result = knowledgeFileDocumentSchema.safeParse({ ...fileForm, file: fileForm.file })
+                  const errs = extractFieldErrors(result)
+                  if (Object.keys(errs).length > 0) {
+                    setFileErrors(errs)
+                    return
+                  }
+                  setFileErrors({})
+                  uploadFileDocumentMutation.mutate()
+                }}
+                disabled={uploadFileDocumentMutation.isPending}
                 className="mt-4 rounded-xl bg-teal-700 px-4 py-2 text-sm font-bold text-white hover:bg-teal-800 disabled:opacity-50"
               >
                 Subir archivo
@@ -434,10 +488,10 @@ export function AdminKnowledgePage() {
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 <input value={textForm.title} onChange={event => setTextForm(prev => ({ ...prev, title: event.target.value }))} placeholder="Título" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
                 <input value={textForm.authority} onChange={event => setTextForm(prev => ({ ...prev, authority: event.target.value }))} placeholder="Autoridad" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-                <select value={textForm.sourceType} onChange={event => setTextForm(prev => ({ ...prev, sourceType: event.target.value }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                <select aria-label="Tipo de fuente" value={textForm.sourceType} onChange={event => setTextForm(prev => ({ ...prev, sourceType: event.target.value }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
                   {SOURCE_TYPE_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
                 </select>
-                <select value={textForm.specialty} onChange={event => setTextForm(prev => ({ ...prev, specialty: event.target.value }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                <select aria-label="Especialidad" value={textForm.specialty} onChange={event => setTextForm(prev => ({ ...prev, specialty: event.target.value }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
                   {SPECIALTY_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
                 </select>
                 <input value={textForm.useCases} onChange={event => setTextForm(prev => ({ ...prev, useCases: event.target.value }))} placeholder="Use cases (coma)" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
@@ -448,10 +502,30 @@ export function AdminKnowledgePage() {
                 <input value={textForm.drugNames} onChange={event => setTextForm(prev => ({ ...prev, drugNames: event.target.value }))} placeholder="Medicamentos" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
               </div>
               <textarea value={textForm.contentText} onChange={event => setTextForm(prev => ({ ...prev, contentText: event.target.value }))} placeholder="Contenido clínico a indexar" className="mt-3 min-h-48 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" />
+              {Object.keys(textErrors).length > 0 && (
+                <div className="mt-3 rounded-xl bg-red-50 px-4 py-3">
+                  <p className="mb-1 text-xs font-bold text-red-700">Corregí los siguientes campos:</p>
+                  <ul className="list-disc space-y-0.5 pl-4">
+                    {Object.values(textErrors).map((msg, i) => (
+                      // eslint-disable-next-line react/no-array-index-key
+                      <li key={i} className="text-xs text-red-600">{msg}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <button
                 type="button"
-                onClick={() => createTextDocumentMutation.mutate()}
-                disabled={createTextDocumentMutation.isPending || !textForm.title || !textForm.authority || !textForm.contentText}
+                onClick={() => {
+                  const result = knowledgeTextDocumentSchema.safeParse(textForm)
+                  const errs = extractFieldErrors(result)
+                  if (Object.keys(errs).length > 0) {
+                    setTextErrors(errs)
+                    return
+                  }
+                  setTextErrors({})
+                  createTextDocumentMutation.mutate()
+                }}
+                disabled={createTextDocumentMutation.isPending}
                 className="mt-4 rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-50"
               >
                 Ingerir documento textual
@@ -463,20 +537,40 @@ export function AdminKnowledgePage() {
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 <input value={urlForm.title} onChange={event => setUrlForm(prev => ({ ...prev, title: event.target.value }))} placeholder="Título" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
                 <input value={urlForm.authority} onChange={event => setUrlForm(prev => ({ ...prev, authority: event.target.value }))} placeholder="Autoridad" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-                <select value={urlForm.sourceType} onChange={event => setUrlForm(prev => ({ ...prev, sourceType: event.target.value }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                <select aria-label="Tipo de fuente" value={urlForm.sourceType} onChange={event => setUrlForm(prev => ({ ...prev, sourceType: event.target.value }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
                   {SOURCE_TYPE_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
                 </select>
-                <select value={urlForm.specialty} onChange={event => setUrlForm(prev => ({ ...prev, specialty: event.target.value }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                <select aria-label="Especialidad" value={urlForm.specialty} onChange={event => setUrlForm(prev => ({ ...prev, specialty: event.target.value }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">
                   {SPECIALTY_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
                 </select>
                 <input value={urlForm.useCases} onChange={event => setUrlForm(prev => ({ ...prev, useCases: event.target.value }))} placeholder="Use cases (coma)" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
                 <input value={urlForm.country} onChange={event => setUrlForm(prev => ({ ...prev, country: event.target.value }))} placeholder="País" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
               </div>
               <input value={urlForm.sourceUrl} onChange={event => setUrlForm(prev => ({ ...prev, sourceUrl: event.target.value }))} placeholder="https://..." className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" />
+              {Object.keys(urlErrors).length > 0 && (
+                <div className="mt-3 rounded-xl bg-red-50 px-4 py-3">
+                  <p className="mb-1 text-xs font-bold text-red-700">Corregí los siguientes campos:</p>
+                  <ul className="list-disc space-y-0.5 pl-4">
+                    {Object.values(urlErrors).map((msg, i) => (
+                      // eslint-disable-next-line react/no-array-index-key
+                      <li key={i} className="text-xs text-red-600">{msg}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <button
                 type="button"
-                onClick={() => ingestUrlMutation.mutate()}
-                disabled={ingestUrlMutation.isPending || !urlForm.title || !urlForm.authority || !urlForm.sourceUrl}
+                onClick={() => {
+                  const result = knowledgeUrlDocumentSchema.safeParse(urlForm)
+                  const errs = extractFieldErrors(result)
+                  if (Object.keys(errs).length > 0) {
+                    setUrlErrors(errs)
+                    return
+                  }
+                  setUrlErrors({})
+                  ingestUrlMutation.mutate()
+                }}
+                disabled={ingestUrlMutation.isPending}
                 className="mt-4 rounded-xl bg-cyan-600 px-4 py-2 text-sm font-bold text-white hover:bg-cyan-700 disabled:opacity-50"
               >
                 Ingerir URL

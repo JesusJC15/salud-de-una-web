@@ -4,8 +4,10 @@ import {
   Activity,
   AlertTriangle,
   CheckCircle2,
+  ChevronRight,
   Clock,
   DatabaseZap,
+  FileText,
   Info,
   LogOut,
   ShieldCheck,
@@ -67,6 +69,95 @@ function widthClassFromPercent(value: number): string {
   const clamped = Math.max(0, Math.min(100, value))
   const roundedToStep = Math.round(clamped / 5) * 5
   return WIDTH_CLASS_BY_STEP[roundedToStep] ?? 'w-0'
+}
+
+// ─── Admin modules ──────────────────────────────────────────────────────────
+
+const ADMIN_MODULES = [
+  {
+    href: '/admin/doctors',
+    icon: Stethoscope,
+    title: 'Médicos',
+    description: 'Verificación REThUS y gestión de doctores',
+    accent: 'teal' as const,
+  },
+  {
+    href: '/admin/users',
+    icon: Users,
+    title: 'Usuarios',
+    description: 'Administrar pacientes, médicos y admins',
+    accent: 'cyan' as const,
+  },
+  {
+    href: '/admin/billing',
+    icon: TrendingUp,
+    title: 'Facturación',
+    description: 'Precios por especialidad y transacciones',
+    accent: 'emerald' as const,
+  },
+  {
+    href: '/admin/ai/prompts',
+    icon: Zap,
+    title: 'Prompts IA',
+    description: 'Gestión de versiones y activación de prompts',
+    accent: 'amber' as const,
+  },
+  {
+    href: '/admin/knowledge',
+    icon: DatabaseZap,
+    title: 'Knowledge Base',
+    description: 'Corpus clínico, RAG y trazabilidad',
+    accent: 'violet' as const,
+  },
+  {
+    href: '/admin/reports',
+    icon: FileText,
+    title: 'Reportes',
+    description: 'Exportar consultas como CSV con filtros',
+    accent: 'slate' as const,
+  },
+] as const
+
+type ModuleAccent = 'teal' | 'cyan' | 'emerald' | 'amber' | 'violet' | 'slate'
+
+const MODULE_ACCENT_MAP: Record<ModuleAccent, { bg: string, icon: string, chevron: string }> = {
+  teal: { bg: 'bg-teal-50 hover:bg-teal-100/70', icon: 'bg-teal-500 text-white', chevron: 'text-teal-400' },
+  cyan: { bg: 'bg-cyan-50 hover:bg-cyan-100/70', icon: 'bg-cyan-500 text-white', chevron: 'text-cyan-400' },
+  emerald: { bg: 'bg-emerald-50 hover:bg-emerald-100/70', icon: 'bg-emerald-500 text-white', chevron: 'text-emerald-400' },
+  amber: { bg: 'bg-amber-50 hover:bg-amber-100/70', icon: 'bg-amber-500 text-white', chevron: 'text-amber-400' },
+  violet: { bg: 'bg-violet-50 hover:bg-violet-100/70', icon: 'bg-violet-500 text-white', chevron: 'text-violet-400' },
+  slate: { bg: 'bg-slate-50 hover:bg-slate-100/70', icon: 'bg-slate-700 text-white', chevron: 'text-slate-400' },
+}
+
+function AdminModuleCard({
+  href,
+  icon: Icon,
+  title,
+  description,
+  accent,
+}: {
+  href: string
+  icon: React.ElementType
+  title: string
+  description: string
+  accent: ModuleAccent
+}) {
+  const c = MODULE_ACCENT_MAP[accent]
+  return (
+    <Link
+      href={href}
+      className={`group flex items-center gap-4 rounded-2xl border border-transparent ${c.bg} p-4 transition-all hover:shadow-[0_4px_20px_rgba(0,0,0,0.06)]`}
+    >
+      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${c.icon} shadow-sm`}>
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-black text-slate-900">{title}</p>
+        <p className="mt-0.5 text-xs text-slate-500 leading-relaxed">{description}</p>
+      </div>
+      <ChevronRight className={`h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5 ${c.chevron}`} />
+    </Link>
+  )
 }
 
 // ─── sub-components ────────────────────────────────────────────────────────
@@ -172,27 +263,6 @@ function AlertRow({
       </div>
     </div>
   )
-}
-
-function QuickActionBtn({ href, icon: Icon, label, external }: { href: string, icon: React.ElementType, label: string, external?: boolean }) {
-  const inner = (
-    <div className="group flex flex-col items-center gap-2 rounded-2xl bg-teal-50 px-5 py-4 transition-all hover:bg-teal-100 hover:shadow-[0_4px_16px_rgba(20,184,166,0.12)]">
-      <div className="rounded-xl bg-white p-2.5 shadow-sm transition-transform group-hover:scale-105">
-        <Icon className="h-5 w-5 text-teal-600" />
-      </div>
-      <span className="text-xs font-bold text-teal-800">{label}</span>
-    </div>
-  )
-
-  if (external) {
-    return (
-      <a href={href} target="_blank" rel="noopener noreferrer">
-        {inner}
-      </a>
-    )
-  }
-
-  return <Link href={href}>{inner}</Link>
 }
 
 // ─── Doctor status mini list ───────────────────────────────────────────────
@@ -325,10 +395,10 @@ export function AdminHomePage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <div>
             <h1 className="font-manrope text-xl font-black tracking-tight text-slate-900">
-              Control Operativo
+              Panel de Administración
             </h1>
             <p className="text-xs font-medium text-slate-400">
-              Vista ejecutiva del sistema en tiempo real
+              SaludDeUna — Control operativo en tiempo real
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -361,6 +431,18 @@ export function AdminHomePage() {
             </p>
           </div>
         )}
+
+        {/* ── Módulos del sistema ── */}
+        <section>
+          <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-slate-400">
+            Módulos disponibles
+          </h2>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {ADMIN_MODULES.map(mod => (
+              <AdminModuleCard key={mod.href} {...mod} />
+            ))}
+          </div>
+        </section>
 
         {biz?.productKpis?.length
           ? (
@@ -802,20 +884,7 @@ export function AdminHomePage() {
           </div>
         </section>
 
-        {/* ── Quick Access ── */}
-        <section>
-          <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-slate-400">
-            Acceso Rápido
-          </h2>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <QuickActionBtn href="/doctor/queue" icon={Activity} label="Cola de consultas" />
-            <QuickActionBtn href="/admin/doctors" icon={Users} label="Doctores" />
-            <QuickActionBtn href="/admin/users" icon={ShieldCheck} label="Usuarios" />
-            <QuickActionBtn href="/admin/knowledge" icon={DatabaseZap} label="Knowledge" />
-            <QuickActionBtn href="/admin/ai/prompts" icon={Zap} label="Prompts IA" />
-            <QuickActionBtn href="/admin/billing" icon={TrendingUp} label="Facturación" />
-          </div>
-        </section>
+        {/* Sección de módulos arriba, Acceso Rápido eliminado */}
 
       </div>
     </div>

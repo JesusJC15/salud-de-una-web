@@ -198,6 +198,79 @@ async function handle(req: Request, context: RouteContext) {
     return json({ items: [], unreadCount: 0 })
   }
 
+  if (method === 'GET' && path === 'v1/doctors/me') {
+    return json({
+      id: 'doctor-1',
+      firstName: 'Demo',
+      lastName: 'Doctor',
+      email: 'doctor@saluddeuna.test',
+      specialty: 'GENERAL_MEDICINE',
+      doctorStatus: 'VERIFIED',
+      availabilityStatus: 'AVAILABLE',
+    })
+  }
+
+  // ── Billing ──────────────────────────────────────────────────────────────
+  if (method === 'GET' && path === 'v1/billing/admin/prices') {
+    return json([
+      { specialty: 'GENERAL_MEDICINE', amount: 30000, currency: 'COP', active: true },
+      { specialty: 'ODONTOLOGY', amount: 50000, currency: 'COP', active: true },
+      { specialty: 'URGENT_CARE', amount: 80000, currency: 'COP', active: true },
+    ])
+  }
+
+  if (method === 'GET' && path === 'v1/billing/admin/transactions') {
+    return json({ items: [], total: 0, page: 1, limit: 20 })
+  }
+
+  if (method === 'PATCH' && /^v1\/billing\/admin\/prices\//.test(path)) {
+    return json({ specialty: path.split('/').pop(), amount: 35000, currency: 'COP', active: true })
+  }
+
+  // ── Reports ───────────────────────────────────────────────────────────────
+  if (method === 'GET' && path === 'v1/admin/reports/consultations.csv') {
+    return new Response('id,specialty,priority,status,createdAt\ne2e-test-id,GENERAL_MEDICINE,HIGH,CLOSED,2024-01-01T00:00:00.000Z', {
+      status: 200,
+      headers: { 'Content-Type': 'text/csv', 'x-correlation-id': 'e2e-correlation-id' },
+    })
+  }
+
+  // ── Admin users ───────────────────────────────────────────────────────────
+  if (method === 'GET' && path === 'v1/admin/users') {
+    return json({ pagination: { page: 1, limit: 20, total: 0, totalPages: 1 }, items: [] })
+  }
+
+  // ── Knowledge ─────────────────────────────────────────────────────────────
+  if (method === 'GET' && path === 'v1/knowledge/sources') {
+    return json([])
+  }
+
+  if (method === 'GET' && path === 'v1/knowledge/documents') {
+    return json({ items: [], total: 0 })
+  }
+
+  if (method === 'GET' && path === 'v1/knowledge/jobs') {
+    return json({ items: [], total: 0 })
+  }
+
+  if (method === 'GET' && path === 'v1/dashboard/rag-metrics') {
+    return json({
+      generatedAt: now,
+      corpus: { totalDocuments: 0, approvedDocuments: 0, pendingReview: 0, suspendedDocuments: 0 },
+      jobs: { totalLast24h: 0, failedLast24h: 0 },
+      retrieval: { totalLast24h: 0, groundedRate: 0, fallbackRate: 0, zeroHitRate: 0, avgLatencyMs: 0 },
+      feedback: { total: 0, usefulRate: 0, groundedRate: 0 },
+    })
+  }
+
+  if (method === 'GET' && path === 'v1/dashboard/rag-traces') {
+    return json({ items: [], total: 0 })
+  }
+
+  if (method === 'POST' && path === 'v1/knowledge/sources') {
+    return json({ _id: 'src-1', name: 'Test Source', authority: 'Test', sourceType: 'GUIDELINE', status: 'ACTIVE', country: 'CO', allowUrlIngest: false, authorityWeight: 1, isGlobalFallback: false })
+  }
+
   return json({ message: `Unhandled E2E mock route ${method} ${path}` }, 404)
 }
 

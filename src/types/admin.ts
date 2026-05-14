@@ -8,6 +8,30 @@ import type {
   UserRole,
 } from './enums'
 
+export interface AdminUserListItem {
+  id: string
+  role: UserRole
+  firstName: string
+  lastName: string
+  email: string
+  isActive: boolean
+  createdAt: string | null
+  updatedAt: string | null
+  specialty?: string
+  doctorStatus?: string
+  personalId?: string
+}
+
+export interface AdminUsersResponse {
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+  items: AdminUserListItem[]
+}
+
 export interface Admin {
   id?: EntityId
   firstName: string

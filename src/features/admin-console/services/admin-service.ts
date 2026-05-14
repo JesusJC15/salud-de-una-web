@@ -1,5 +1,7 @@
 import type { RethusVerifyFormValues } from '../validators/rethus-verify-schema'
 import type {
+  AdminUserListItem,
+  AdminUsersResponse,
   AiPromptItem,
   BillingPrice,
   DoctorReviewItem,
@@ -17,29 +19,7 @@ import type {
 import { apiClient } from '@/api/api-client'
 import envConfig from '@/utils/config/envConfig'
 
-export interface AdminUserListItem {
-  id: string
-  role: 'PATIENT' | 'DOCTOR' | 'ADMIN'
-  firstName: string
-  lastName: string
-  email: string
-  isActive: boolean
-  createdAt: string | null
-  updatedAt: string | null
-  specialty?: string
-  doctorStatus?: string
-  personalId?: string
-}
-
-export interface AdminUsersResponse {
-  pagination: {
-    page: number
-    limit: number
-    total: number
-    totalPages: number
-  }
-  items: AdminUserListItem[]
-}
+export type { AdminUserListItem, AdminUsersResponse }
 
 export const adminService = {
   async listUsers(params: { role?: string, search?: string, page?: number, limit?: number } = {}) {

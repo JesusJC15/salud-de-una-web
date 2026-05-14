@@ -1,8 +1,8 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { StaffRouteGuard } from '@/features/auth/components/staff-route-guard'
+import { RoleRedirectGuard } from '@/features/auth/components/role-redirect-guard'
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  return <StaffRouteGuard allowedRoles={['ADMIN']}>{children}</StaffRouteGuard>
+  return <RoleRedirectGuard allowedRoles={['ADMIN']}>{children}</RoleRedirectGuard>
 }

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { adminService } from '@/features/admin-console/services/admin-service'
 import { useDebounce } from '@/hooks/use-debounce'
+import { translateSpecialty } from '@/utils/specialty-labels'
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Todos' },
@@ -168,7 +169,7 @@ export function AdminDoctorsPage() {
                           </p>
                           <p className="text-xs text-slate-400">{item.email}</p>
                         </td>
-                        <td className="px-4 py-3 text-slate-500">{item.specialty}</td>
+                        <td className="px-4 py-3 text-slate-500">{translateSpecialty(item.specialty)}</td>
                         <td className="px-4 py-3">
                           <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${
                             item.doctorStatus === 'PENDING'

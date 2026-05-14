@@ -29,13 +29,37 @@ function LoadingScreen() {
   )
 }
 
+function PatientWebFallback({ onLogout }: { onLogout: () => void }) {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#f5fbfb] p-6">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50">
+        <svg className="h-7 w-7 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        </svg>
+      </div>
+      <p className="max-w-xs text-center text-sm font-semibold text-slate-700">
+        SaludDeUna Web es exclusiva para médicos y administradores.
+      </p>
+      <p className="max-w-xs text-center text-xs text-slate-400">
+        Descargá la app móvil SaludDeUna para acceder a tus consultas como paciente.
+      </p>
+      <button
+        onClick={onLogout}
+        className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-200"
+      >
+        Cerrar sesión
+      </button>
+    </div>
+  )
+}
+
 function UnknownRoleFallback({ onLogout }: { onLogout: () => void }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#f5fbfb] p-6">
       <p className="text-center text-sm text-slate-500">
-        Tu cuenta aún no tiene un rol asignado en SaludDeUna.
+        Tu cuenta no tiene acceso a esta plataforma.
         <br />
-        Contacta al administrador para activar tu acceso.
+        Contactá al administrador para activar tu acceso.
       </p>
       <button
         onClick={onLogout}
@@ -102,6 +126,9 @@ export function DashboardPage() {
 
   if (role === 'DOCTOR' || role === 'ADMIN')
     return <LoadingScreen />
+
+  if (role === 'PATIENT')
+    return <PatientWebFallback onLogout={() => void authService.logout()} />
 
   return (
     <UnknownRoleFallback

@@ -5,6 +5,19 @@ export interface TechnicalMetricsResponseDto {
   p95LatencyMs: number
   errorRate: number
   timestamp: IsoDateString
+  source: 'redis' | 'memory'
+  degraded: boolean
+}
+
+export interface ProductKpi {
+  key: string
+  label: string
+  value: number
+  target: number
+  unit: string
+  formula: string
+  source: string
+  state: 'OK' | 'WARNING' | 'CRITICAL'
 }
 
 export interface BusinessMetricsResponseDto {
@@ -28,4 +41,5 @@ export interface BusinessMetricsResponseDto {
     unreadNotifications: number
     verificationCoverage: number
   }
+  productKpis: ProductKpi[]
 }

@@ -1,17 +1,29 @@
+interface EnvConfig {
+  env: string
+  backendOrigin: string
+  baseUrl: string
+  apiBaseUrl: string
+  socketBaseUrl: string
+  localStorageKeys: {
+    refreshToken: string
+    user: string
+  }
+}
+
 const API_PREFIX = '/v1'
 
-function trimTrailingSlashes(url) {
+function trimTrailingSlashes(url: string): string {
   let end = String(url || '').length
   const str = String(url || '')
   while (end > 0 && str[end - 1] === '/') end--
   return end === str.length ? str : str.slice(0, end)
 }
 
-function normalizeBaseUrl(value) {
+function normalizeBaseUrl(value: string): string {
   return trimTrailingSlashes(value)
 }
 
-function stripApiPrefix(value) {
+function stripApiPrefix(value: string): string {
   const normalized = normalizeBaseUrl(value)
   return normalized.endsWith(API_PREFIX)
     ? normalized.slice(0, -API_PREFIX.length)
@@ -26,7 +38,7 @@ const backendOrigin = stripApiPrefix(
   || 'http://localhost:3000',
 )
 
-const config = {
+const config: EnvConfig = {
   env: process.env.NODE_ENV ?? 'development',
   backendOrigin,
   baseUrl: backendOrigin,

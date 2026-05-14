@@ -1,5 +1,6 @@
 'use client'
 
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 import { useAdminBilling } from '../hooks/use-admin-billing'
 
@@ -13,12 +14,16 @@ function formatCOP(amount: number) {
   return `$${amount.toLocaleString('es-CO')} COP`
 }
 
-export default function AdminBillingPage() {
+export function AdminBillingPage() {
   const [editingSpecialty, setEditingSpecialty] = useState<string | null>(null)
   const [newAmount, setNewAmount] = useState('')
+  const [page, setPage] = useState(1)
+  const LIMIT = 20
 
   const { transactions, total, isLoadingTransactions, prices, isLoadingPrices, updatePriceMutation }
-    = useAdminBilling({ limit: 20 })
+    = useAdminBilling({ page, limit: LIMIT })
+
+  const totalPages = Math.max(1, Math.ceil(total / LIMIT))
 
   const handleUpdatePrice = async (specialty: string) => {
     const amount = Number.parseInt(newAmount, 10)
@@ -72,6 +77,7 @@ export default function AdminBillingPage() {
                       {editingSpecialty === price.specialty
                         ? (
                           <input
+                            aria-label={`Nuevo precio para ${SPECIALTY_LABELS[price.specialty] ?? price.specialty}`}
                             className="w-32 rounded-lg border border-slate-300 px-2 py-1 text-sm"
                             type="number"
                             value={newAmount}
@@ -86,6 +92,7 @@ export default function AdminBillingPage() {
                         ? (
                           <div className="flex gap-2">
                             <button
+                              type="button"
                               className="rounded bg-teal-600 px-3 py-1 text-xs text-white disabled:opacity-60"
                               disabled={updatePriceMutation.isPending}
                               onClick={() => void handleUpdatePrice(price.specialty)}
@@ -93,6 +100,7 @@ export default function AdminBillingPage() {
                               {updatePriceMutation.isPending ? 'Guardando...' : 'Guardar'}
                             </button>
                             <button
+                              type="button"
                               className="rounded border border-slate-200 px-3 py-1 text-xs text-slate-600"
                               onClick={() => {
                                 setEditingSpecialty(null)
@@ -105,6 +113,7 @@ export default function AdminBillingPage() {
                         )
                         : (
                           <button
+                            type="button"
                             className="rounded bg-slate-800 px-3 py-1 text-xs text-white hover:bg-slate-700"
                             onClick={() => {
                               setEditingSpecialty(price.specialty)
@@ -187,6 +196,47 @@ export default function AdminBillingPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Paginación */}
+        {totalPages > 1 && (
+          <div className="mt-4 flex items-center justify-between">
+            <p className="text-xs text-slate-400">
+              Página
+              {' '}
+              {page}
+              {' '}
+              de
+              {' '}
+              {totalPages}
+              {' '}
+              ·
+              {' '}
+              {total}
+              {' '}
+              resultados
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                aria-label="Página anterior"
+                disabled={page <= 1}
+                onClick={() => setPage(p => p - 1)}
+                className="rounded-lg border border-slate-200 p-1.5 text-slate-500 hover:border-teal-300 disabled:opacity-40"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Página siguiente"
+                disabled={page >= totalPages}
+                onClick={() => setPage(p => p + 1)}
+                className="rounded-lg border border-slate-200 p-1.5 text-slate-500 hover:border-teal-300 disabled:opacity-40"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   )

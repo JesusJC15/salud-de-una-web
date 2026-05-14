@@ -1,49 +1,11 @@
 'use client'
 
+import type { BusinessMetricsResponseDto, TechnicalMetricsResponseDto } from '@/types/dashboard'
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@/api/api-client'
 
-interface BusinessMetrics {
-  generatedAt: string
-  kpis: {
-    totalPatients: number
-    totalDoctors: number
-    verifiedDoctors: number
-    pendingDoctors: number
-  }
-  doctorStatusBreakdown: {
-    verified: number
-    pending: number
-    rejected: number
-  }
-  growthLast7Days: {
-    patients: number
-    doctors: number
-  }
-  operationalSignals: {
-    unreadNotifications: number
-    verificationCoverage: number
-  }
-  productKpis: {
-    key: string
-    label: string
-    value: number
-    target: number
-    unit: string
-    formula: string
-    source: string
-    state: 'OK' | 'WARNING' | 'CRITICAL'
-  }[]
-}
-
-interface TechnicalMetrics {
-  sampleSize: number
-  p95LatencyMs: number
-  errorRate: number
-  timestamp: string
-  source: 'redis' | 'memory'
-  degraded: boolean
-}
+export type BusinessMetrics = BusinessMetricsResponseDto
+export type TechnicalMetrics = TechnicalMetricsResponseDto
 
 export interface DashboardAlerts {
   generatedAt: string

@@ -1,11 +1,11 @@
 'use client'
 
 import type { ConsultationPriority, QueueItem } from '@/features/doctor-queue/services/consultation-service'
-import { useAuth0 } from '@auth0/auth0-react'
 import { AlertTriangle, Brain, ChevronDown, ChevronRight, Clock, LogOut, PauseCircle, Sparkles, Stethoscope, Timer } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import toast from 'react-hot-toast'
 import { NotificationBell } from '@/components/notification-bell'
 import { useAssignConsultation } from '@/features/doctor-queue/hooks/use-assign-consultation'
 import { useConsultationDetail } from '@/features/doctor-queue/hooks/use-consultation-detail'
@@ -303,11 +303,10 @@ function KpiBar({ total, high, moderate, low }: { total: number, high: number, m
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function DoctorHomePage() {
-  const { user } = useAuth0()
   const router = useRouter()
   const { data, isLoading, isError } = useConsultationQueue()
   const assignMutation = useAssignConsultation()
-  const { availability, isUpdating, toggle } = useDoctorAvailability()
+  const { availability, doctorName, isUpdating, toggle } = useDoctorAvailability()
   const [filterSpecialty, setFilterSpecialty] = useState<string>('')
   const [filterPriority, setFilterPriority] = useState<ConsultationPriority | ''>('')
 
@@ -320,11 +319,15 @@ export function DoctorHomePage() {
   const low = items.filter(i => i.priority === 'LOW')
 
   const handleAttend = async (id: string) => {
-    await assignMutation.mutateAsync(id)
-    router.push(`/doctor/consultations/${id}`)
+    try {
+      await assignMutation.mutateAsync(id)
+      router.push(`/doctor/consultations/${id}`)
+    }
+    catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No fue posible tomar el caso')
+    }
   }
 
-  const doctorName = user?.name?.split(' ')[0] ?? 'Doctor'
   const [greeting] = useState(() => {
     const hour = new Date().getHours()
     return hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches'
@@ -414,6 +417,7 @@ export function DoctorHomePage() {
             '',
             'GENERAL_MEDICINE',
             'ODONTOLOGY',
+            'URGENT_CARE',
           ] as const).map(sp => (
             <button
               key={sp}

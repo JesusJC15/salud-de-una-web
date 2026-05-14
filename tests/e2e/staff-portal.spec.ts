@@ -14,10 +14,11 @@ test('admin legacy login reaches the admin dashboard', async ({ page }) => {
   await expect(page.getByText('Control Operativo')).toBeVisible()
 })
 
-test('doctor legacy login reaches the doctor workspace', async ({ page }) => {
+test('doctor legacy login reaches the doctor portal', async ({ page }) => {
   await login(page, 'doctor@saluddeuna.test')
   await expect(page).toHaveURL(/\/doctor/)
-  await expect(page.getByRole('heading', { name: 'Cola de consultas' })).toBeVisible()
+  await expect(page.getByText('Funcionalidades disponibles')).toBeVisible()
+  await expect(page.getByText('Cola de Consultas')).toBeVisible()
 })
 
 test('doctor cannot use the admin area', async ({ page }) => {
@@ -60,3 +61,44 @@ for (const width of [
     await expect(page.getByText('Control Operativo')).toBeVisible()
   })
 }
+
+test('admin billing page loads prices and shows pagination UI', async ({ page }) => {
+  await login(page, 'admin@saluddeuna.test')
+  await page.goto('/admin/billing')
+  await expect(page.getByRole('heading', { name: 'Facturación' })).toBeVisible()
+  await expect(page.getByText('Medicina General')).toBeVisible()
+  await expect(page.getByText('Odontología')).toBeVisible()
+  await expect(page.getByText('Urgencias')).toBeVisible()
+})
+
+test('admin reports page shows date and specialty filter fields', async ({ page }) => {
+  await login(page, 'admin@saluddeuna.test')
+  await page.goto('/admin/reports')
+  await expect(page.getByRole('heading', { name: 'Reportes' })).toBeVisible()
+  await expect(page.getByLabel('Desde')).toBeVisible()
+  await expect(page.getByLabel('Hasta')).toBeVisible()
+  await expect(page.getByLabel('Especialidad')).toBeVisible()
+  await expect(page.getByLabel('Prioridad')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Descargar CSV' })).toBeVisible()
+})
+
+test('admin reports page applies filters as chips and allows clearing', async ({ page }) => {
+  await login(page, 'admin@saluddeuna.test')
+  await page.goto('/admin/reports')
+  await page.getByLabel('Especialidad').selectOption('ODONTOLOGY')
+  // Target the chip span specifically, not the <option> element
+  const chip = page.locator('span').filter({ hasText: 'Odontología' })
+  await expect(chip).toBeVisible()
+  await page.getByRole('button', { name: 'Limpiar filtros' }).click()
+  await expect(chip).not.toBeVisible()
+})
+
+test('knowledge form shows Zod validation error when source name is empty', async ({ page }) => {
+  await login(page, 'admin@saluddeuna.test')
+  await page.goto('/admin/knowledge')
+  await expect(page.getByRole('heading', { name: 'Knowledge & RAG Console' })).toBeVisible()
+  // Click "Crear fuente" without filling required fields
+  await page.getByRole('button', { name: 'Crear fuente' }).click()
+  // Should show inline validation error list
+  await expect(page.getByText('Corregí los siguientes campos:')).toBeVisible()
+})

@@ -324,6 +324,15 @@ async function executeRequest<T>(
     return executeRequest<T>(basePath, endpoint, config, false)
   }
 
+  if (response.status === 429) {
+    const retryAfter = response.headers.get('Retry-After')
+    const waitSecs = retryAfter ? Number.parseInt(retryAfter, 10) : 30
+    throw new ApiClientError(
+      `Demasiadas solicitudes. Intentá de nuevo en ${waitSecs}s`,
+      { status: 429, correlationId: requestCorrelationId, path: url },
+    )
+  }
+
   if (!response.ok) {
     throw await readError(response, `Request failed with status ${response.status}`)
   }

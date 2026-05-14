@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { ApiErrorState } from '@/components/api-error-state'
 import { LoadingState } from '@/components/loading-state'
+import { useSessionExpiryWarning } from '@/hooks/use-session-expiry-warning'
+import { SessionContext } from '@/providers/session-context'
 import { authService } from '@/services/auth-service'
 import { useStaffSession } from '../hooks/use-staff-session'
 
@@ -16,6 +18,7 @@ interface Props {
 export function StaffRouteGuard({ allowedRoles, children }: Props) {
   const router = useRouter()
   const session = useStaffSession(allowedRoles)
+  useSessionExpiryWarning()
 
   useEffect(() => {
     if (session.status === 'unauthenticated') {
@@ -48,16 +51,18 @@ export function StaffRouteGuard({ allowedRoles, children }: Props) {
   }
 
   return (
-    <div data-user-role={session.user.role}>
-      {children}
-      <span className="sr-only">
-        Sesión activa. Rol:
-        {' '}
-        {session.user.role}
-      </span>
-      <button type="button" className="hidden" onClick={() => void authService.logout()}>
-        Cerrar sesión
-      </button>
-    </div>
+    <SessionContext value={session.user}>
+      <div data-user-role={session.user.role}>
+        {children}
+        <span className="sr-only">
+          Sesión activa. Rol:
+          {' '}
+          {session.user.role}
+        </span>
+        <button type="button" className="hidden" onClick={() => void authService.logout()}>
+          Cerrar sesión
+        </button>
+      </div>
+    </SessionContext>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { ChatPanel } from '@/features/doctor-queue/components/chat-panel'
 import { ClinicalSummaryPanel } from '@/features/doctor-queue/components/clinical-summary-panel'
@@ -12,13 +12,17 @@ import { useCloseConsultation } from '@/features/doctor-queue/hooks/use-close-co
 import { useConsultationDetail } from '@/features/doctor-queue/hooks/use-consultation-detail'
 import { useGenerateSummary } from '@/features/doctor-queue/hooks/use-generate-summary'
 import { useSummaryFeedback } from '@/features/doctor-queue/hooks/use-summary-feedback'
-import { authService } from '@/services/auth-service'
+import { useSession } from '@/providers/session-context'
+import { translateConsultationStatus } from '@/utils/consultation-status-labels'
+import { translateSpecialty } from '@/utils/specialty-labels'
 
 interface Props { consultationId: string }
 
 export function DoctorConsultationPage({ consultationId }: Props) {
   const router = useRouter()
-  const [doctorId, setDoctorId] = useState<string | null>(null)
+  const session = useSession()
+  const doctorId = session?.id ?? null
+
   const [baselineSymptomSeverity, setBaselineSymptomSeverity] = useState(5)
   const [redFlagsConfirmed, setRedFlagsConfirmed] = useState(false)
   const [closeConfirmationOpen, setCloseConfirmationOpen] = useState(false)
@@ -31,19 +35,6 @@ export function DoctorConsultationPage({ consultationId }: Props) {
     consultation?.status === 'IN_ATTENTION' ? consultationId : null,
     doctorId,
   )
-
-  useEffect(() => {
-    async function extractDoctorId() {
-      try {
-        const user = await authService.getCurrentUser()
-        if (!user)
-          return
-        setDoctorId(user.id)
-      }
-      catch {}
-    }
-    void extractDoctorId()
-  }, [])
 
   const handleClose = async () => {
     try {
@@ -82,22 +73,24 @@ export function DoctorConsultationPage({ consultationId }: Props) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
+            type="button"
             onClick={() => router.push('/doctor/queue')}
             className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
           >
             ← Cola
           </button>
           <PriorityBadge priority={consultation.priority} />
-          <span className="text-sm text-slate-500 font-medium">{consultation.specialty}</span>
+          <span className="text-sm font-medium text-slate-500">{translateSpecialty(consultation.specialty)}</span>
           <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-600">
-            {consultation.status}
+            {translateConsultationStatus(consultation.status)}
           </span>
         </div>
         {!isClosed && consultation.status === 'IN_ATTENTION' && (
           <button
+            type="button"
             onClick={() => setCloseConfirmationOpen(true)}
             disabled={closeConsultationMutation.isPending}
-            className="rounded-lg bg-red-50 border border-red-200 px-3 py-1.5 text-sm font-bold text-red-600 hover:bg-red-100 disabled:opacity-50"
+            className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-sm font-bold text-red-600 hover:bg-red-100 disabled:opacity-50"
           >
             Cerrar consulta
           </button>
