@@ -57,6 +57,39 @@ function applySecurityHeaders(res: NextResponse) {
   )
 }
 
+async function validateTokenViaBackend(
+  token: string,
+  apiBaseUrl: string,
+): Promise<{ kind: 'valid', role: string } | { kind: 'invalid' } | { kind: 'unavailable' }> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 3000)
+  try {
+    const response = await fetch(`${apiBaseUrl}/v1/auth/me`, {
+      method: 'GET',
+      headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+      signal: controller.signal,
+    })
+    if (!response.ok) {
+      return response.status === 401 || response.status === 403
+        ? { kind: 'invalid' }
+        : { kind: 'unavailable' }
+    }
+    const payload = await response.json() as { user?: { role?: string } }
+    return payload.user?.role
+      ? { kind: 'valid', role: payload.user.role }
+      : { kind: 'invalid' }
+  }
+  catch {
+    return { kind: 'unavailable' }
+  }
+  finally {
+    clearTimeout(timeoutId)
+  }
+}
+
+// ── Local JWT verification: Auth0 RS256 + legacy HS256 ────────────────────────
+
 async function verifyAuth0Token(token: string): Promise<string | null> {
   const jwks = getAuth0Jwks()
   const domain = process.env.NEXT_PUBLIC_AUTH0_DOMAIN
@@ -94,19 +127,35 @@ async function verifyLegacyToken(token: string): Promise<string | null> {
 
 async function validateTokenLocally(
   token: string,
-): Promise<{ kind: 'valid', role: string } | { kind: 'invalid' }> {
-  // Quick expiry check before attempting crypto — avoids JWKS fetch for expired tokens
+): Promise<{ kind: 'valid', role: string } | { kind: 'invalid' } | { kind: 'needs_backend' }> {
+  // Quick expiry check before attempting crypto — decodeJwt is pure base64, no network
   try {
     const { exp } = decodeJwt(token)
     if (exp && exp * 1000 < Date.now())
       return { kind: 'invalid' }
   }
   catch {
+    // Not a decodable JWT — cannot verify locally
+    return { kind: 'needs_backend' }
+  }
+
+  // Try Auth0 RS256 via public JWKS — works in all environments
+  const auth0Role = await verifyAuth0Token(token)
+  if (auth0Role)
+    return { kind: 'valid', role: auth0Role }
+
+  // Try legacy HS256 with shared secret — requires JWT_SECRET env var
+  if (process.env.JWT_SECRET) {
+    const legacyRole = await verifyLegacyToken(token)
+    if (legacyRole)
+      return { kind: 'valid', role: legacyRole }
+    // JWT_SECRET is set but token didn't verify → definitively invalid
     return { kind: 'invalid' }
   }
 
-  const role = await verifyAuth0Token(token) ?? await verifyLegacyToken(token)
-  return role ? { kind: 'valid', role } : { kind: 'invalid' }
+  // JWT_SECRET not configured (e.g. Vercel without the env var):
+  // delegate to the backend — it knows the secret
+  return { kind: 'needs_backend' }
 }
 
 function redirectToLogin(req: NextRequest, pathname: string, clearCookie = false) {
@@ -141,20 +190,56 @@ export async function middleware(req: NextRequest) {
     return redirectToLogin(req, pathname)
   }
 
-  const validation = await validateTokenLocally(accessToken)
+  const isE2EMode = process.env.NEXT_PUBLIC_ENABLE_E2E_BACKEND_MOCK === 'true'
+  const apiBaseUrl = trimTrailingSlashes(
+    (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/v1$/, ''),
+  )
+
+  let validation: Awaited<ReturnType<typeof validateTokenViaBackend>>
+
+  if (isE2EMode) {
+    // E2E mock: tokens are not real JWTs — delegate to mock backend
+    const result = await validateTokenViaBackend(accessToken, apiBaseUrl)
+    if (result.kind === 'unavailable') {
+      const next = NextResponse.next()
+      applySecurityHeaders(next)
+      return next
+    }
+    validation = result
+  }
+  else {
+    const localResult = await validateTokenLocally(accessToken)
+
+    if (localResult.kind === 'needs_backend') {
+      // JWT_SECRET not configured — fall back to backend call (legacy tokens in Vercel
+      // without JWT_SECRET, or any other environment where the secret is unavailable)
+      const backendResult = await validateTokenViaBackend(accessToken, apiBaseUrl)
+      if (backendResult.kind === 'unavailable') {
+        const next = NextResponse.next()
+        applySecurityHeaders(next)
+        return next
+      }
+      validation = backendResult
+    }
+    else {
+      validation = localResult
+    }
+  }
 
   if (validation.kind === 'invalid') {
     return redirectToLogin(req, pathname, true)
   }
 
+  const { role } = validation as { kind: 'valid', role: string }
+
   // Role-based routing
-  if (pathname.startsWith('/doctor') && validation.role !== 'DOCTOR') {
+  if (pathname.startsWith('/doctor') && role !== 'DOCTOR') {
     const redirect = NextResponse.redirect(new URL('/dashboard', req.url))
     applySecurityHeaders(redirect)
     return redirect
   }
 
-  if (pathname.startsWith('/admin') && validation.role !== 'ADMIN') {
+  if (pathname.startsWith('/admin') && role !== 'ADMIN') {
     const redirect = NextResponse.redirect(new URL('/dashboard', req.url))
     applySecurityHeaders(redirect)
     return redirect
