@@ -2,17 +2,21 @@
 
 import {
   Activity,
+  AlertTriangle,
   ChevronRight,
   History,
   LogOut,
   PauseCircle,
+  RefreshCw,
   Stethoscope,
 } from 'lucide-react'
 import Link from 'next/link'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { NotificationBell } from '@/components/notification-bell'
 import { useConsultationQueue } from '@/features/doctor-queue/hooks/use-consultation-queue'
 import { useDoctorAvailability } from '@/features/doctor-queue/hooks/use-doctor-availability'
+import { doctorService } from '@/features/doctor-queue/services/doctor-service'
 import { authService } from '@/services/auth-service'
 
 interface FeatureCardProps {
@@ -69,8 +73,9 @@ function FeatureCard({ href, icon: Icon, title, description, badge, accent }: Fe
 }
 
 export function DoctorPortalPage() {
-  const { availability, doctorName, specialty, isUpdating, toggle } = useDoctorAvailability()
+  const { availability, doctorName, specialty, doctorStatus, isUpdating, toggle } = useDoctorAvailability()
   const { data: queueData, isLoading: queueLoading } = useConsultationQueue()
+  const [resubmitting, setResubmitting] = useState(false)
 
   const pendingCount = queueData?.items.length ?? 0
   const greeting = (() => {
@@ -84,6 +89,20 @@ export function DoctorPortalPage() {
     }
     catch {
       toast.error('No fue posible cerrar sesión')
+    }
+  }
+
+  const handleRethusResubmit = async () => {
+    setResubmitting(true)
+    try {
+      await doctorService.rethusResubmit()
+      toast.success('Solicitud de re-verificación enviada. El equipo revisará tu caso.')
+    }
+    catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No fue posible enviar la solicitud')
+    }
+    finally {
+      setResubmitting(false)
     }
   }
 
@@ -151,6 +170,34 @@ export function DoctorPortalPage() {
 
       {/* ── Content ── */}
       <div className="mx-auto max-w-2xl space-y-6 px-6 py-8">
+
+        {/* Verification status banner */}
+        {(doctorStatus === 'PENDING' || doctorStatus === 'REJECTED') && (
+          <div className={`flex items-start gap-3 rounded-2xl border px-4 py-3 ${doctorStatus === 'REJECTED' ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50'}`}>
+            <AlertTriangle className={`mt-0.5 h-5 w-5 shrink-0 ${doctorStatus === 'REJECTED' ? 'text-red-500' : 'text-amber-500'}`} />
+            <div className="flex-1">
+              <p className={`text-sm font-semibold ${doctorStatus === 'REJECTED' ? 'text-red-700' : 'text-amber-700'}`}>
+                {doctorStatus === 'REJECTED' ? 'Verificación REThUS rechazada' : 'Verificación REThUS pendiente'}
+              </p>
+              <p className={`mt-0.5 text-xs ${doctorStatus === 'REJECTED' ? 'text-red-600' : 'text-amber-600'}`}>
+                {doctorStatus === 'REJECTED'
+                  ? 'Tu verificación fue rechazada. Podés solicitar una revisión al equipo de administración.'
+                  : 'Tu cuenta está pendiente de verificación. Podés atender consultas una vez que sea aprobada.'}
+              </p>
+            </div>
+            {doctorStatus === 'REJECTED' && (
+              <button
+                type="button"
+                onClick={() => void handleRethusResubmit()}
+                disabled={resubmitting}
+                className="ml-auto flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-60"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${resubmitting ? 'animate-spin' : ''}`} />
+                {resubmitting ? 'Enviando...' : 'Solicitar revisión'}
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Availability banner when paused */}
         {availability === 'PAUSED' && (

@@ -96,6 +96,20 @@ export const adminService = {
     return res.data
   },
 
+  async checkAiHealth() {
+    const res = await apiClient('').post<{
+      provider: string
+      model: string
+      status: 'up' | 'down' | 'disabled'
+      latencyMs: number
+      checkedAt: string
+      degraded: boolean
+      requestId: string
+      error?: string
+    }>('admin/ai/health-check')
+    return res.data
+  },
+
   async getBillingPrices() {
     const res = await apiClient('').get<BillingPrice[]>('billing/admin/prices')
     return res.data
@@ -137,6 +151,23 @@ export const adminService = {
     notes?: string
   }) {
     const res = await apiClient('').post<KnowledgeSourceItem>('knowledge/sources', input)
+    return res.data
+  },
+
+  async updateKnowledgeSource(sourceId: string, input: {
+    name?: string
+    authority?: string
+    sourceType?: string
+    baseUrl?: string
+    country?: string
+    notes?: string
+  }) {
+    const res = await apiClient('').patch<KnowledgeSourceItem>(`knowledge/sources/${sourceId}`, input)
+    return res.data
+  },
+
+  async getKnowledgeDocument(documentId: string) {
+    const res = await apiClient('').get<import('@/types/admin').KnowledgeDocumentItem>(`knowledge/documents/${documentId}`)
     return res.data
   },
 

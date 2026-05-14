@@ -30,6 +30,7 @@ export function useDoctorAvailability() {
     availability: query.data?.availabilityStatus ?? 'AVAILABLE',
     doctorName: query.data?.firstName ?? '',
     specialty: query.data?.specialty ?? '',
+    doctorStatus: query.data?.doctorStatus ?? 'PENDING',
     isUpdating: mutation.isPending,
     toggle,
   }

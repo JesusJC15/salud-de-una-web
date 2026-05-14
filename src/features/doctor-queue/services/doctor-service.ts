@@ -25,4 +25,14 @@ export const doctorService = {
     )
     return res.data
   },
+
+  async rethusResubmit(input: { evidenceUrl?: string, notes?: string } = {}): Promise<{ message: string }> {
+    const res = await apiClient('').post<{ message: string }>('doctors/me/rethus-resubmit', input)
+    return res.data
+  },
+
+  async getAdminUser(role: string, userId: string) {
+    const res = await apiClient('').get<import('@/types/admin').AdminUserListItem>(`admin/users/${role}/${userId}`)
+    return res.data
+  },
 }
