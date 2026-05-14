@@ -18,10 +18,7 @@ type ChatAck
     | { ok: false, code: string, message: string }
 
 function createClientMessageId() {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID()
-  }
-  return `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  return crypto.randomUUID()
 }
 
 export function useChatSocket(consultationId: string | null, currentUserId: string | null) {

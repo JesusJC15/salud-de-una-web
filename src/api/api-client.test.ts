@@ -137,25 +137,12 @@ describe('apiClient', () => {
     expect(headers.get('x-correlation-id')).toBe('header-cid')
   })
 
-  it('falls back to a generated correlation id when crypto.randomUUID is unavailable', async () => {
+  it('uses crypto.randomUUID to generate the correlation id', async () => {
     ;(globalThis.fetch as jest.Mock).mockResolvedValue(createJsonResponse({ ok: true }))
-
-    Object.defineProperty(globalThis, 'crypto', {
-      configurable: true,
-      value: {},
-    })
-
-    const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(123456789)
-    const mathRandomSpy = jest.spyOn(Math, 'random').mockReturnValue(0.123456789)
-
     const { apiClient } = await import('@/api/api-client')
     await apiClient('auth').get('status', false)
-
     const headers = (globalThis.fetch as jest.Mock).mock.calls[0][1].headers as Headers
-    expect(headers.get('x-correlation-id')).toBe('123456789-4fzzzxjyl')
-
-    dateNowSpy.mockRestore()
-    mathRandomSpy.mockRestore()
+    expect(headers.get('x-correlation-id')).toBe('api-correlation-id')
   })
 
   it('returns undefined for 204 responses', async () => {
