@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 import { adminService } from '@/features/admin-console/services/admin-service'
@@ -53,9 +53,18 @@ export function AdminDoctorsPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-black text-slate-900">Doctores</h1>
-        <p className="text-sm text-slate-500">Revisión REThUS y estado operativo.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-slate-900">Doctores</h1>
+          <p className="text-sm text-slate-500">Revisión REThUS y estado operativo.</p>
+        </div>
+        <Link
+          href="/admin"
+          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Volver
+        </Link>
       </div>
 
       {/* Summary cards */}

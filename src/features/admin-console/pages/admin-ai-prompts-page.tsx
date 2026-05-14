@@ -1,7 +1,8 @@
 'use client'
 
 import type { AiPromptItem } from '@/types/admin'
-import { Activity, AlertTriangle, CheckCircle2, Loader2, Zap } from 'lucide-react'
+import { Activity, AlertTriangle, ArrowLeft, CheckCircle2, Loader2, Zap } from 'lucide-react'
+import Link from 'next/link'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { adminService } from '@/features/admin-console/services/admin-service'
@@ -154,17 +155,26 @@ export default function AdminAiPromptsPage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => void handleHealthCheck()}
-          disabled={healthChecking}
-          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:border-teal-300 hover:text-teal-700 disabled:opacity-60"
-        >
-          {healthChecking
-            ? <Loader2 className="h-4 w-4 animate-spin" />
-            : <Activity className="h-4 w-4" />}
-          {healthChecking ? 'Verificando...' : 'Verificar conectividad IA'}
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin"
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Volver
+          </Link>
+          <button
+            type="button"
+            onClick={() => void handleHealthCheck()}
+            disabled={healthChecking}
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:border-teal-300 hover:text-teal-700 disabled:opacity-60"
+          >
+            {healthChecking
+              ? <Loader2 className="h-4 w-4 animate-spin" />
+              : <Activity className="h-4 w-4" />}
+            {healthChecking ? 'Verificando...' : 'Verificar conectividad IA'}
+          </button>
+        </div>
       </div>
 
       {/* ── Health result ── */}

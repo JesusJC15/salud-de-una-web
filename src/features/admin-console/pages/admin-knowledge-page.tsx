@@ -1,7 +1,8 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, CheckCircle2, DatabaseZap, RefreshCw, ShieldAlert } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, CheckCircle2, DatabaseZap, RefreshCw, ShieldAlert } from 'lucide-react'
+import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { adminService } from '@/features/admin-console/services/admin-service'
@@ -323,14 +324,23 @@ export function AdminKnowledgePage() {
               Gobierno clínico, corpus aprobado y trazabilidad de recuperación.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => void invalidateKnowledge()}
-            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Refrescar
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/admin"
+              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Volver
+            </Link>
+            <button
+              type="button"
+              onClick={() => void invalidateKnowledge()}
+              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refrescar
+            </button>
+          </div>
         </div>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

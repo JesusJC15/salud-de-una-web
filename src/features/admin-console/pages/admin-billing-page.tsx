@@ -1,6 +1,7 @@
 'use client'
 
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
+import Link from 'next/link'
 import { useState } from 'react'
 import { useAdminBilling } from '../hooks/use-admin-billing'
 
@@ -36,13 +37,22 @@ export function AdminBillingPage() {
 
   return (
     <div className="space-y-8 p-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Facturación</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          {total}
-          {' '}
-          transacciones registradas
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Facturación</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            {total}
+            {' '}
+            transacciones registradas
+          </p>
+        </div>
+        <Link
+          href="/admin"
+          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Volver
+        </Link>
       </div>
 
       {/* Precios por especialidad */}

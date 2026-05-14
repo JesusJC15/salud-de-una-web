@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { adminService } from '@/features/admin-console/services/admin-service'
 import { translateSpecialty } from '@/utils/specialty-labels'
@@ -55,9 +57,18 @@ export function AdminReportsPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-black text-slate-900">Reportes</h1>
-        <p className="text-sm text-slate-500">Exportá el historial de consultas con filtros opcionales.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-slate-900">Reportes</h1>
+          <p className="text-sm text-slate-500">Exportá el historial de consultas con filtros opcionales.</p>
+        </div>
+        <Link
+          href="/admin"
+          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Volver
+        </Link>
       </div>
 
       <div className="rounded-2xl bg-white p-6 shadow-sm">
