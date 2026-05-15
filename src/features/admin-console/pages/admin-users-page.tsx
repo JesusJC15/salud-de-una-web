@@ -15,6 +15,15 @@ const ROLE_OPTIONS = [
   { value: 'ADMIN', label: 'Admins' },
 ]
 
+const SKELETON_ROW_KEYS = [
+  'skeleton-row-1',
+  'skeleton-row-2',
+  'skeleton-row-3',
+  'skeleton-row-4',
+  'skeleton-row-5',
+  'skeleton-row-6',
+]
+
 export function AdminUsersPage() {
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
@@ -110,83 +119,89 @@ export function AdminUsersPage() {
 
       {/* Table */}
       <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white shadow-sm">
-        {usersQuery.isLoading ? (
-          <div className="divide-y divide-slate-50">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-4 px-4 py-3">
-                <div className="h-4 w-40 animate-pulse rounded bg-slate-100" />
-                <div className="h-4 w-48 animate-pulse rounded bg-slate-100" />
-                <div className="h-4 w-20 animate-pulse rounded bg-slate-100" />
-                <div className="ml-auto h-5 w-16 animate-pulse rounded-full bg-slate-100" />
-              </div>
-            ))}
-          </div>
-        ) : usersQuery.isError ? (
-          <div className="flex flex-col items-center gap-3 py-12 text-center">
-            <p className="text-sm text-red-600">No se pudieron cargar los usuarios.</p>
-            <button
-              type="button"
-              onClick={() => void usersQuery.refetch()}
-              className="text-xs text-teal-600 underline"
-            >
-              Reintentar
-            </button>
-          </div>
-        ) : (usersQuery.data?.items ?? []).length === 0 ? (
-          <div className="py-12 text-center">
-            <p className="text-sm text-slate-400">Sin resultados para los filtros seleccionados.</p>
-          </div>
-        ) : (
-          <table className="w-full text-sm border-separate border-spacing-0">
-            <thead className="bg-slate-50">
-              <tr>
-                {[
-                  'Nombre',
-                  'Correo',
-                  'Rol',
-                  'Estado',
-                ].map(header => (
-                  <th key={header} className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500 border-b border-slate-100">
-                    {header}
-                  </th>
-                ))}
-                {/* Columna Sticky en Header */}
-                <th className="sticky right-0 bg-slate-50 px-4 py-3 text-left text-xs font-bold uppercase text-slate-500 border-b border-slate-100 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]">
-                  Acción
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {(usersQuery.data?.items ?? []).map(item => (
-                <tr key={item.id} className="hover:bg-slate-50/60 transition-colors group">
-                  <td className="px-4 py-3 font-medium text-slate-900">
-                    {item.firstName}
-                    {' '}
-                    {item.lastName}
-                  </td>
-                  <td className="px-4 py-3 text-slate-500">{item.email}</td>
-                  <td className="px-4 py-3 text-slate-500">{item.role}</td>
-                  <td className="px-4 py-3">
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${item.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                      {item.isActive ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-                  {/* Columna Sticky en Body */}
-                  <td className="sticky right-0 bg-white px-4 py-3 group-hover:bg-slate-50 transition-colors shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]">
-                    <button
-                      type="button"
-                      onClick={() => toggleMutation.mutate({ role: item.role, userId: item.id, isActive: !item.isActive })}
-                      disabled={toggleMutation.isPending}
-                      className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:border-teal-300 hover:text-teal-600 disabled:opacity-50 bg-white"
-                    >
-                      {item.isActive ? 'Desactivar' : 'Activar'}
-                    </button>
-                  </td>
-                </tr>
+        {usersQuery.isLoading
+          ? (
+            <div className="divide-y divide-slate-50">
+              {SKELETON_ROW_KEYS.map(key => (
+                <div key={key} className="flex items-center gap-4 px-4 py-3">
+                  <div className="h-4 w-40 animate-pulse rounded bg-slate-100" />
+                  <div className="h-4 w-48 animate-pulse rounded bg-slate-100" />
+                  <div className="h-4 w-20 animate-pulse rounded bg-slate-100" />
+                  <div className="ml-auto h-5 w-16 animate-pulse rounded-full bg-slate-100" />
+                </div>
               ))}
-            </tbody>
-          </table>
-        )}
+            </div>
+          )
+          : usersQuery.isError
+            ? (
+              <div className="flex flex-col items-center gap-3 py-12 text-center">
+                <p className="text-sm text-red-600">No se pudieron cargar los usuarios.</p>
+                <button
+                  type="button"
+                  onClick={() => void usersQuery.refetch()}
+                  className="text-xs text-teal-600 underline"
+                >
+                  Reintentar
+                </button>
+              </div>
+            )
+            : (usersQuery.data?.items ?? []).length === 0
+              ? (
+                <div className="py-12 text-center">
+                  <p className="text-sm text-slate-400">Sin resultados para los filtros seleccionados.</p>
+                </div>
+              )
+              : (
+                <table className="w-full text-sm border-separate border-spacing-0">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      {[
+                        'Nombre',
+                        'Correo',
+                        'Rol',
+                        'Estado',
+                      ].map(header => (
+                        <th key={header} className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500 border-b border-slate-100">
+                          {header}
+                        </th>
+                      ))}
+                      {/* Columna Sticky en Header */}
+                      <th className="sticky right-0 bg-slate-50 px-4 py-3 text-left text-xs font-bold uppercase text-slate-500 border-b border-slate-100 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]">
+                        Acción
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {(usersQuery.data?.items ?? []).map(item => (
+                      <tr key={item.id} className="hover:bg-slate-50/60 transition-colors group">
+                        <td className="px-4 py-3 font-medium text-slate-900">
+                          {item.firstName}
+                          {' '}
+                          {item.lastName}
+                        </td>
+                        <td className="px-4 py-3 text-slate-500">{item.email}</td>
+                        <td className="px-4 py-3 text-slate-500">{item.role}</td>
+                        <td className="px-4 py-3">
+                          <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${item.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                            {item.isActive ? 'Activo' : 'Inactivo'}
+                          </span>
+                        </td>
+                        {/* Columna Sticky en Body */}
+                        <td className="sticky right-0 bg-white px-4 py-3 group-hover:bg-slate-50 transition-colors shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]">
+                          <button
+                            type="button"
+                            onClick={() => toggleMutation.mutate({ role: item.role, userId: item.id, isActive: !item.isActive })}
+                            disabled={toggleMutation.isPending}
+                            className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:border-teal-300 hover:text-teal-600 disabled:opacity-50 bg-white"
+                          >
+                            {item.isActive ? 'Desactivar' : 'Activar'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
       </div>
 
       {/* Pagination */}

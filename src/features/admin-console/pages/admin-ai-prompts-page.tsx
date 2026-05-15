@@ -170,8 +170,12 @@ export default function AdminAiPromptsPage() {
             className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:border-teal-300 hover:text-teal-700 disabled:opacity-60"
           >
             {healthChecking
-              ? <Loader2 className="h-4 w-4 animate-spin" />
-              : <Activity className="h-4 w-4" />}
+              ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )
+              : (
+                <Activity className="h-4 w-4" />
+              )}
             {healthChecking ? 'Verificando...' : 'Verificar conectividad IA'}
           </button>
         </div>
@@ -198,14 +202,16 @@ export default function AdminAiPromptsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {prompts.length === 0 ? (
-              <tr>
-                <td className="px-4 py-8 text-center text-slate-400" colSpan={6}>
-                  No hay prompts registrados. Se sembrarán al reiniciar el backend.
-                </td>
-              </tr>
-            ) : (
-              prompts.map(prompt => (
+            {prompts.length === 0
+              ? (
+                <tr>
+                  <td className="px-4 py-8 text-center text-slate-400" colSpan={6}>
+                    No hay prompts registrados. Se sembrarán al reiniciar el backend.
+                  </td>
+                </tr>
+              )
+              : (
+                prompts.map(prompt => (
                 <tr key={prompt._id} className="group hover:bg-slate-50">
                   <td className="px-4 py-3 font-mono text-xs text-slate-800 border-b border-slate-50">
                     {prompt.key}
