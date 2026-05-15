@@ -20,6 +20,7 @@ export interface Patient {
   gender?: UserGender
   heightCm?: number | null
   weightKg?: number | null
+  bmi?: number | null
   isActive: boolean
   createdAt?: IsoDateString | null
   updatedAt?: IsoDateString | null
@@ -35,6 +36,7 @@ export interface PatientProfileResponseDto {
   gender?: UserGender
   heightCm?: number | null
   weightKg?: number | null
+  bmi?: number | null
   createdAt: IsoDateString | null
   updatedAt: IsoDateString | null
 }
