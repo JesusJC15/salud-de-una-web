@@ -18,6 +18,7 @@ import {
   Zap,
 } from 'lucide-react'
 import Link from 'next/link'
+import { DashboardBrandMark } from '@/components/dashboard/dashboard-brand-mark'
 import { NotificationBell } from '@/components/notification-bell'
 import { useAiMetrics, useBusinessMetrics, useConsultationMetrics, useDashboardAlerts, useRecentErrors, useRevenueMetrics, useSystemHealth, useTechnicalMetrics } from '@/features/admin-home/hooks/use-dashboard-metrics'
 import { authService } from '@/services/auth-service'
@@ -98,7 +99,7 @@ const ADMIN_MODULES = [
   {
     href: '/admin/ai/prompts',
     icon: Zap,
-    title: 'Prompts IA',
+    title: 'Constructor de Prompts de IA',
     description: 'Gestión de versiones y activación de prompts',
     accent: 'amber' as const,
   },
@@ -392,14 +393,17 @@ export function AdminHomePage() {
     <div className="min-h-screen bg-[#f5fbfb]">
       {/* ── Header ── */}
       <div className="sticky top-0 z-10 border-b border-teal-100/60 bg-white/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div>
-            <h1 className="font-manrope text-xl font-black tracking-tight text-slate-900">
-              Panel de Administración
-            </h1>
-            <p className="text-xs font-medium text-slate-400">
-              SaludDeUna — Control operativo en tiempo real
-            </p>
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <DashboardBrandMark />
+            <div>
+              <h1 className="font-manrope text-xl font-black tracking-tight text-slate-900">
+                Panel de Administración
+              </h1>
+              <p className="text-xs font-medium text-slate-400">
+                SaludDeUna — Control operativo en tiempo real
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <NotificationBell />
@@ -791,7 +795,7 @@ export function AdminHomePage() {
           </h2>
 
           {/* Health badges */}
-          <div className="mb-4 grid grid-cols-3 gap-3">
+          <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {([
               { key: 'database', label: 'MongoDB' },
               { key: 'redis', label: 'Redis' },
@@ -799,15 +803,48 @@ export function AdminHomePage() {
             ] as const).map((key) => {
               const check = health?.checks[key.key]
               const value = check?.status
+
               const isWarning = value === 'degraded'
               const ok = value === 'up'
+              const containerClass = ok
+                ? 'border-emerald-200 bg-emerald-50'
+                : isWarning
+                  ? 'border-amber-200 bg-amber-50'
+                  : 'border-red-200 bg-red-50'
+              const dotClass = ok
+                ? 'bg-emerald-500'
+                : isWarning
+                  ? 'bg-amber-500'
+                  : 'bg-red-500'
+              const labelClass = ok
+                ? 'text-emerald-700'
+                : isWarning
+                  ? 'text-amber-700'
+                  : 'text-red-700'
+              const valueClass = ok
+                ? 'text-emerald-600'
+                : isWarning
+                  ? 'text-amber-600'
+                  : 'text-red-600'
+
               return (
-                <div key={key.key} className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 ${ok ? 'border-emerald-200 bg-emerald-50' : isWarning ? 'border-amber-200 bg-amber-50' : 'border-red-200 bg-red-50'}`}>
-                  <span className={`h-2 w-2 rounded-full ${ok ? 'bg-emerald-500' : isWarning ? 'bg-amber-500' : 'bg-red-500'}`} />
-                  <span className={`text-xs font-bold uppercase ${ok ? 'text-emerald-700' : isWarning ? 'text-amber-700' : 'text-red-700'}`}>
+                <div
+                  key={key.key}
+                  className={`flex min-w-0 items-center gap-2 rounded-xl border px-3 py-2.5 ${containerClass}`}
+                >
+                  <span
+                    className={`h-2 w-2 rounded-full ${dotClass}`}
+                  />
+
+                  <span
+                    className={`min-w-0 truncate text-xs font-bold uppercase ${labelClass}`}
+                  >
                     {key.label}
                   </span>
-                  <span className={`ml-auto text-[11px] ${ok ? 'text-emerald-600' : isWarning ? 'text-amber-600' : 'text-red-600'}`}>
+
+                  <span
+                    className={`ml-auto shrink-0 text-[11px] ${valueClass}`}
+                  >
                     {value ?? '—'}
                   </span>
                 </div>

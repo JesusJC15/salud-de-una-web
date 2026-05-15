@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { adminService } from '@/features/admin-console/services/admin-service'
 import { translateSpecialty } from '@/utils/specialty-labels'
@@ -87,7 +87,7 @@ export function AdminReportsPage() {
               type="date"
               value={from}
               onChange={e => setFrom(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-teal-400 focus:outline-none"
+              className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-base text-slate-700 focus:border-teal-400 focus:outline-none sm:text-sm"
             />
           </div>
 
@@ -101,7 +101,7 @@ export function AdminReportsPage() {
               value={to}
               onChange={e => setTo(e.target.value)}
               min={from || undefined}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-teal-400 focus:outline-none"
+              className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-base text-slate-700 focus:border-teal-400 focus:outline-none sm:text-sm"
             />
           </div>
 
@@ -113,7 +113,7 @@ export function AdminReportsPage() {
               id="report-specialty"
               value={specialty}
               onChange={e => setSpecialty(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-teal-400 focus:outline-none"
+              className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-base text-slate-700 focus:border-teal-400 focus:outline-none sm:text-sm"
             >
               <option value="">Todas</option>
               {SPECIALTIES.map(s => (
@@ -130,7 +130,7 @@ export function AdminReportsPage() {
               id="report-priority"
               value={priority}
               onChange={e => setPriority(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-teal-400 focus:outline-none"
+              className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-base text-slate-700 focus:border-teal-400 focus:outline-none sm:text-sm"
             >
               <option value="">Todas</option>
               {PRIORITIES.map(p => (

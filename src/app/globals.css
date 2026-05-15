@@ -163,7 +163,7 @@
   body {
     @apply bg-background text-foreground;
     min-height: max(884px, 100dvh);
-    overflow-x: hidden;
+    overflow-x: clip;
   }
   html {
     @apply font-sans;

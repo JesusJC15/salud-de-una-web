@@ -8,11 +8,11 @@ import {
   LogOut,
   PauseCircle,
   RefreshCw,
-  Stethoscope,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
+import { DashboardBrandMark } from '@/components/dashboard/dashboard-brand-mark'
 import { NotificationBell } from '@/components/notification-bell'
 import { useConsultationQueue } from '@/features/doctor-queue/hooks/use-consultation-queue'
 import { useDoctorAvailability } from '@/features/doctor-queue/hooks/use-doctor-availability'
@@ -111,11 +111,9 @@ export function DoctorPortalPage() {
 
       {/* ── Header ── */}
       <div className="sticky top-0 z-10 border-b border-teal-100/60 bg-white/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-2xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-2xl flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50">
-              <Stethoscope className="h-5 w-5 text-teal-600" />
-            </div>
+            <DashboardBrandMark />
             <div>
               <p className="text-xs font-medium text-slate-400">
                 {greeting}

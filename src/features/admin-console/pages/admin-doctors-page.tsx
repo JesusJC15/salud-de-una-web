@@ -68,22 +68,33 @@ export function AdminDoctorsPage() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-4 gap-3">
-        <div className="rounded-2xl bg-white p-4 shadow-sm">
-          <p className="text-xs text-slate-400">Total</p>
-          <p className="text-2xl font-black text-slate-900">{summary?.total ?? 0}</p>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="min-w-0 rounded-2xl bg-white p-4 shadow-sm">
+          <p className="truncate text-xs text-slate-400">Total</p>
+          <p className="truncate text-2xl font-black text-slate-900">
+            {summary?.total ?? 0}
+          </p>
         </div>
-        <div className="rounded-2xl bg-white p-4 shadow-sm">
-          <p className="text-xs text-slate-400">Pendientes</p>
-          <p className="text-2xl font-black text-amber-600">{summary?.pending ?? 0}</p>
+
+        <div className="min-w-0 rounded-2xl bg-white p-4 shadow-sm">
+          <p className="truncate text-xs text-slate-400">Pendientes</p>
+          <p className="truncate text-2xl font-black text-amber-600">
+            {summary?.pending ?? 0}
+          </p>
         </div>
-        <div className="rounded-2xl bg-white p-4 shadow-sm">
-          <p className="text-xs text-slate-400">Verificados</p>
-          <p className="text-2xl font-black text-emerald-600">{summary?.verified ?? 0}</p>
+
+        <div className="min-w-0 rounded-2xl bg-white p-4 shadow-sm">
+          <p className="truncate text-xs text-slate-400">Verificados</p>
+          <p className="truncate text-2xl font-black text-emerald-600">
+            {summary?.verified ?? 0}
+          </p>
         </div>
-        <div className="rounded-2xl bg-white p-4 shadow-sm">
-          <p className="text-xs text-slate-400">Rechazados</p>
-          <p className="text-2xl font-black text-red-600">{summary?.rejected ?? 0}</p>
+
+        <div className="min-w-0 rounded-2xl bg-white p-4 shadow-sm">
+          <p className="truncate text-xs text-slate-400">Rechazados</p>
+          <p className="truncate text-2xl font-black text-red-600">
+            {summary?.rejected ?? 0}
+          </p>
         </div>
       </div>
 
@@ -136,7 +147,10 @@ export function AdminDoctorsPage() {
           : doctorsQuery.isError
             ? (
               <div className="flex flex-col items-center gap-3 py-12 text-center">
-                <p className="text-sm text-red-600">No se pudieron cargar los doctores.</p>
+                <p className="text-sm text-red-600">
+                  No se pudieron cargar los doctores.
+                </p>
+
                 <button
                   type="button"
                   onClick={() => void doctorsQuery.refetch()}
@@ -149,52 +163,93 @@ export function AdminDoctorsPage() {
             : (doctorsQuery.data?.items ?? []).length === 0
               ? (
                 <div className="py-12 text-center">
-                  <p className="text-sm text-slate-400">Sin resultados para los filtros seleccionados.</p>
+                  <p className="text-sm text-slate-400">
+                    Sin resultados para los filtros seleccionados.
+                  </p>
                 </div>
               )
               : (
-                <table className="w-full text-sm">
+                <table className="min-w-[900px] text-sm">
                   <thead className="bg-slate-50">
                     <tr>
-                      {[
-                        'Doctor',
-                        'Especialidad',
-                        'Estado',
-                        'Última verificación',
-                        'Acción',
-                      ].map(header => (
-                        <th key={header} className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">{header}</th>
-                      ))}
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">
+                        Doctor
+                      </th>
+
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">
+                        Especialidad
+                      </th>
+
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">
+                        Estado
+                      </th>
+
+                      <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">
+                        Última verificación
+                      </th>
+
+                      <th
+                        className="
+                          sticky right-0 z-10
+                          bg-slate-50
+                          px-4 py-3
+                          text-left text-xs font-bold uppercase text-slate-500
+                          shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.1)]
+                        "
+                      >
+                        Acción
+                      </th>
                     </tr>
                   </thead>
+
                   <tbody className="divide-y divide-slate-50">
                     {(doctorsQuery.data?.items ?? []).map(item => (
-                      <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
+                      <tr
+                        key={item.id}
+                        className="transition-colors hover:bg-slate-50/60"
+                      >
                         <td className="px-4 py-3">
                           <p className="font-semibold text-slate-900">
                             {item.firstName}
                             {' '}
                             {item.lastName}
                           </p>
-                          <p className="text-xs text-slate-400">{item.email}</p>
+
+                          <p className="text-xs text-slate-400">
+                            {item.email}
+                          </p>
                         </td>
-                        <td className="px-4 py-3 text-slate-500">{translateSpecialty(item.specialty)}</td>
+
+                        <td className="px-4 py-3 text-slate-500">
+                          {translateSpecialty(item.specialty)}
+                        </td>
+
                         <td className="px-4 py-3">
-                          <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${
-                            item.doctorStatus === 'PENDING'
-                              ? 'bg-amber-100 text-amber-700'
-                              : item.doctorStatus === 'VERIFIED'
-                                ? 'bg-emerald-100 text-emerald-700'
-                                : 'bg-red-100 text-red-700'
-                          }`}
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+                              item.doctorStatus === 'PENDING'
+                                ? 'bg-amber-100 text-amber-700'
+                                : item.doctorStatus === 'VERIFIED'
+                                  ? 'bg-emerald-100 text-emerald-700'
+                                  : 'bg-red-100 text-red-700'
+                            }`}
                           >
                             {item.doctorStatus}
                           </span>
                         </td>
+
                         <td className="px-4 py-3 text-slate-500">
                           {item.latestVerification?.rethusState ?? 'Sin revisión'}
                         </td>
-                        <td className="px-4 py-3">
+
+                        <td
+                          className="
+                            sticky right-0
+                            bg-white
+                            px-4 py-3
+                            shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.1)]
+                          "
+                        >
                           <Link
                             href={`/admin/doctors/${item.id}/verify`}
                             className="text-xs font-bold text-teal-600 hover:underline"

@@ -147,7 +147,7 @@ export default function AdminAiPromptsPage() {
       {/* ── Header ── */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Prompts de IA</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Constructor de Prompts de IA</h1>
           <p className="mt-1 text-sm text-slate-500">
             {total}
             {' '}
@@ -182,67 +182,74 @@ export default function AdminAiPromptsPage() {
 
       {/* ── Prompts table ── */}
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-        <table className="w-full text-sm">
+        {/* Agregamos border-separate y border-spacing-0 para asegurar el funcionamiento de sticky */}
+        <table className="w-full text-sm border-separate border-spacing-0">
           <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
             <tr>
-              <th className="px-4 py-3">Key</th>
-              <th className="px-4 py-3">Versión</th>
-              <th className="px-4 py-3">Modelo</th>
-              <th className="px-4 py-3">Activo</th>
-              <th className="px-4 py-3">Actualizado</th>
-              <th className="px-4 py-3">Acciones</th>
+              <th className="px-4 py-3 border-b border-slate-100">Key</th>
+              <th className="px-4 py-3 border-b border-slate-100">Versión</th>
+              <th className="px-4 py-3 border-b border-slate-100">Modelo</th>
+              <th className="px-4 py-3 border-b border-slate-100">Activo</th>
+              <th className="px-4 py-3 border-b border-slate-100">Actualizado</th>
+              {/* Columna Acciones Fija */}
+              <th className="sticky right-0 z-10 bg-slate-50 px-4 py-3 border-b border-slate-100 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]">
+                Acciones
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {prompts.length === 0
-              ? (
-                <tr>
-                  <td className="px-4 py-8 text-center text-slate-400" colSpan={6}>
-                    No hay prompts registrados. Se sembrarán al reiniciar el backend.
+            {prompts.length === 0 ? (
+              <tr>
+                <td className="px-4 py-8 text-center text-slate-400" colSpan={6}>
+                  No hay prompts registrados. Se sembrarán al reiniciar el backend.
+                </td>
+              </tr>
+            ) : (
+              prompts.map(prompt => (
+                <tr key={prompt._id} className="group hover:bg-slate-50">
+                  <td className="px-4 py-3 font-mono text-xs text-slate-800 border-b border-slate-50">
+                    {prompt.key}
+                  </td>
+                  <td className="px-4 py-3 text-slate-600 border-b border-slate-50">
+                    v
+                    {prompt.version}
+                  </td>
+                  <td className="px-4 py-3 text-slate-500 border-b border-slate-50">
+                    {prompt.model}
+                  </td>
+                  <td className="px-4 py-3 border-b border-slate-50">
+                    <button
+                      type="button"
+                      aria-label={prompt.active ? 'Desactivar prompt' : 'Activar prompt'}
+                      className={`relative inline-flex h-5 w-9 cursor-pointer rounded-full transition-colors ${
+                        prompt.active ? 'bg-teal-500' : 'bg-slate-300'
+                      }`}
+                      disabled={toggleActiveMutation.isPending}
+                      onClick={() => void handleToggle(prompt)}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 translate-y-0.5 rounded-full bg-white shadow transition-transform ${
+                          prompt.active ? 'translate-x-4' : 'translate-x-0.5'
+                        }`}
+                      />
+                    </button>
+                  </td>
+                  <td className="px-4 py-3 text-slate-400 border-b border-slate-50">
+                    {prompt.updatedAt ? new Date(prompt.updatedAt).toLocaleDateString('es-CO') : '—'}
+                  </td>
+                  {/* Celda de Acciones Fija */}
+                  <td className="sticky right-0 z-10 bg-white px-4 py-3 group-hover:bg-slate-50 transition-colors border-b border-slate-50 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]">
+                    <button
+                      type="button"
+                      className="rounded-lg bg-slate-800 px-3 py-1 text-xs text-white hover:bg-slate-700"
+                      onClick={() => openEdit(prompt)}
+                    >
+                      Editar
+                    </button>
                   </td>
                 </tr>
-              )
-              : (
-                prompts.map(prompt => (
-                  <tr key={prompt._id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 font-mono text-xs text-slate-800">{prompt.key}</td>
-                    <td className="px-4 py-3 text-slate-600">
-                      v
-                      {prompt.version}
-                    </td>
-                    <td className="px-4 py-3 text-slate-500">{prompt.model}</td>
-                    <td className="px-4 py-3">
-                      <button
-                        type="button"
-                        aria-label={prompt.active ? 'Desactivar prompt' : 'Activar prompt'}
-                        className={`relative inline-flex h-5 w-9 cursor-pointer rounded-full transition-colors ${
-                          prompt.active ? 'bg-teal-500' : 'bg-slate-300'
-                        }`}
-                        disabled={toggleActiveMutation.isPending}
-                        onClick={() => void handleToggle(prompt)}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 translate-y-0.5 rounded-full bg-white shadow transition-transform ${
-                            prompt.active ? 'translate-x-4' : 'translate-x-0.5'
-                          }`}
-                        />
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 text-slate-400">
-                      {prompt.updatedAt ? new Date(prompt.updatedAt).toLocaleDateString('es-CO') : '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        type="button"
-                        className="rounded-lg bg-slate-800 px-3 py-1 text-xs text-white hover:bg-slate-700"
-                        onClick={() => openEdit(prompt)}
-                      >
-                        Editar
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
+              ))
+            )}
           </tbody>
         </table>
       </div>
