@@ -1,8 +1,9 @@
 'use client'
 
 import { useAuth0 } from '@auth0/auth0-react'
-import { CheckCircle, ShieldPlus, Sparkles, UserPlus } from 'lucide-react'
+import { CheckCircle, Sparkles, UserPlus } from 'lucide-react'
 import { motion } from 'motion/react'
+import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useEffect, useState } from 'react'
 import { cardPopIn, floatingTransition, pageReveal, staggerItem, staggerParent } from '@/components/animations/motion-presets'
@@ -74,13 +75,14 @@ export function LoginPage() {
 
         <div className="relative z-10 max-w-lg space-y-8 text-center">
           <motion.div className="flex justify-center" variants={staggerItem}>
-            <motion.div
-              className="flex size-20 items-center justify-center rounded-xl bg-teal-500 shadow-lg shadow-teal-500/20"
-              whileHover={{ scale: 1.04, rotate: -3 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 18 }}
-            >
-              <ShieldPlus className="h-16 w-16 text-white" />
-            </motion.div>
+            <Image
+              src="/images/SaludDeUnaLogoPrincipal.png"
+              alt="SaludDeUna"
+              width={260}
+              height={84}
+              priority
+              className="h-auto w-full max-w-[260px] drop-shadow-sm"
+            />
           </motion.div>
 
           <motion.div className="space-y-4" variants={staggerItem}>

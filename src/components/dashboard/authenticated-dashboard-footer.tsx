@@ -4,15 +4,15 @@ import Image from 'next/image'
 
 const FOOTER_SECTIONS = [
   {
-    title: 'About',
+    title: 'Acerca de',
     items: [
       'Nuestra plataforma',
-      'Equipo medico',
-      'Impacto clinico',
+      'Equipo médico',
+      'Impacto clínico',
     ],
   },
   {
-    title: 'Support',
+    title: 'Soporte',
     items: [
       'Centro de ayuda',
       'Guia de inicio',
@@ -20,7 +20,7 @@ const FOOTER_SECTIONS = [
     ],
   },
   {
-    title: 'Privacy',
+    title: 'Privacidad',
     items: [
       'Datos seguros',
       'Normativa',
@@ -28,7 +28,7 @@ const FOOTER_SECTIONS = [
     ],
   },
   {
-    title: 'Terms',
+    title: 'Términos',
     items: [
       'Condiciones',
       'Uso aceptable',
@@ -36,7 +36,7 @@ const FOOTER_SECTIONS = [
     ],
   },
   {
-    title: 'Contact',
+    title: 'Contacto',
     items: [
       'Soporte 24/7',
       'Ventas',
@@ -46,14 +46,14 @@ const FOOTER_SECTIONS = [
 ]
 
 const BRAND_TAGLINES = [
-  'Confianza clinica',
-  'Operacion sin friccion',
+  'Confianza clínica',
+  'Operación sin fricción',
   'Datos accionables',
 ]
 
 export function AuthenticatedDashboardFooter() {
   return (
-    <footer className="bg-gradient-to-b from-[#0b3c74] via-[#062a52] to-[#05060c] text-slate-100">
+    <footer className="bg-gradient-to-b from-teal-50 via-cyan-50 to-white text-slate-700">
       <div className="mx-auto w-full max-w-6xl px-6 py-12">
         <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-md space-y-5">
@@ -68,15 +68,15 @@ export function AuthenticatedDashboardFooter() {
               />
             </div>
 
-            <p className="text-sm leading-relaxed text-slate-200/90">
-              Plataforma integral para coordinar operaciones medicas, equipos clinicos y una atencion al paciente mas humana.
+            <p className="text-sm leading-relaxed text-slate-600">
+              Plataforma integral para coordinar operaciones médicas, equipos clínicos y una atención al paciente más humana.
             </p>
 
-            <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-200/90">
+            <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
               {BRAND_TAGLINES.map(tagline => (
                 <span
                   key={tagline}
-                  className="rounded-full border border-white/15 bg-white/5 px-3 py-1"
+                  className="rounded-full border border-teal-200 bg-white/70 px-3 py-1 text-teal-700"
                 >
                   {tagline}
                 </span>
@@ -88,15 +88,15 @@ export function AuthenticatedDashboardFooter() {
           <div className="grid flex-1 grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-5">
             {FOOTER_SECTIONS.map(section => (
               <div key={section.title} className="space-y-3">
-                <p className="text-xs font-semibold tracking-[0.2em] text-slate-300 uppercase">
+                <p className="text-xs font-semibold tracking-[0.2em] text-slate-500 uppercase">
                   {section.title}
                 </p>
-                <div className="space-y-2 text-sm text-slate-200/90">
+                <div className="space-y-2 text-sm text-slate-600">
                   {section.items.map(item => (
                     <button
                       key={item}
                       type="button"
-                      className="block text-left transition hover:text-white"
+                      className="block text-left transition hover:text-teal-700"
                     >
                       {item}
                     </button>
@@ -107,8 +107,8 @@ export function AuthenticatedDashboardFooter() {
           </div>
         </div>
 
-        <div className="mt-10 border-t border-white/10 pt-6 text-xs text-slate-300">
-          Copyright © 2026 SaludDeUna
+        <div className="mt-10 border-t border-slate-200 pt-6 text-xs text-slate-500">
+          Derechos reservados © 2026 SaludDeUna
         </div>
       </div>
     </footer>
