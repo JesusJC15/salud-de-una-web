@@ -113,6 +113,21 @@ function translateAdminSpecialty(specialty: string | undefined) {
   return BACKEND_TO_SPECIALTY[specialty] ?? specialty
 }
 
+function toBackendSourceForm(form: KnowledgeSourceForm) {
+  return {
+    ...form,
+    sourceType: toBackendSourceType(form.sourceType),
+  }
+}
+
+function toBackendDocumentForm<Form extends KnowledgeDocumentBaseForm>(form: Form) {
+  return {
+    ...form,
+    sourceType: toBackendSourceType(form.sourceType),
+    specialty: toBackendSpecialty(form.specialty),
+  }
+}
+
 export function AdminKnowledgePage() {
   const queryClient = useQueryClient()
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null)
@@ -289,10 +304,7 @@ export function AdminKnowledgePage() {
 
   const createSourceMutation = useMutation({
     mutationFn: () => {
-      const backendForm = {
-        ...sourceForm,
-        sourceType: toBackendSourceType(sourceForm.sourceType),
-      }
+      const backendForm = toBackendSourceForm(sourceForm)
       return adminService.createKnowledgeSource(knowledgeSourceSchema.parse(backendForm))
     },
     onSuccess: async () => {
@@ -312,11 +324,7 @@ export function AdminKnowledgePage() {
 
   const createTextDocumentMutation = useMutation({
     mutationFn: () => {
-      const backendForm = {
-        ...textForm,
-        sourceType: toBackendSourceType(textForm.sourceType),
-        specialty: toBackendSpecialty(textForm.specialty),
-      }
+      const backendForm = toBackendDocumentForm(textForm)
       return adminService.createKnowledgeTextDocument(knowledgeTextDocumentSchema.parse(backendForm))
     },
     onSuccess: async () => {
@@ -343,9 +351,7 @@ export function AdminKnowledgePage() {
   const uploadFileDocumentMutation = useMutation({
     mutationFn: () => {
       const backendForm = {
-        ...fileForm,
-        sourceType: toBackendSourceType(fileForm.sourceType),
-        specialty: toBackendSpecialty(fileForm.specialty),
+        ...toBackendDocumentForm(fileForm),
         file: fileForm.file,
       }
       return adminService.uploadKnowledgeFileDocument(knowledgeFileDocumentSchema.parse(backendForm))
@@ -373,11 +379,7 @@ export function AdminKnowledgePage() {
 
   const ingestUrlMutation = useMutation({
     mutationFn: () => {
-      const backendForm = {
-        ...urlForm,
-        sourceType: toBackendSourceType(urlForm.sourceType),
-        specialty: toBackendSpecialty(urlForm.specialty),
-      }
+      const backendForm = toBackendDocumentForm(urlForm)
       return adminService.ingestKnowledgeUrl(knowledgeUrlDocumentSchema.parse(backendForm))
     },
     onSuccess: async () => {
@@ -529,7 +531,8 @@ export function AdminKnowledgePage() {
               <button
                 type="button"
                 onClick={() => {
-                  const result = knowledgeSourceSchema.safeParse(sourceForm)
+                  const backendForm = toBackendSourceForm(sourceForm)
+                  const result = knowledgeSourceSchema.safeParse(backendForm)
                   const errs = extractFieldErrors(result)
                   if (Object.keys(errs).length > 0) {
                     setSourceErrors(errs)
@@ -591,7 +594,11 @@ export function AdminKnowledgePage() {
               <button
                 type="button"
                 onClick={() => {
-                  const result = knowledgeFileDocumentSchema.safeParse({ ...fileForm, file: fileForm.file })
+                  const backendForm = {
+                    ...toBackendDocumentForm(fileForm),
+                    file: fileForm.file,
+                  }
+                  const result = knowledgeFileDocumentSchema.safeParse(backendForm)
                   const errs = extractFieldErrors(result)
                   if (Object.keys(errs).length > 0) {
                     setFileErrors(errs)
@@ -640,7 +647,8 @@ export function AdminKnowledgePage() {
               <button
                 type="button"
                 onClick={() => {
-                  const result = knowledgeTextDocumentSchema.safeParse(textForm)
+                  const backendForm = toBackendDocumentForm(textForm)
+                  const result = knowledgeTextDocumentSchema.safeParse(backendForm)
                   const errs = extractFieldErrors(result)
                   if (Object.keys(errs).length > 0) {
                     setTextErrors(errs)
@@ -685,7 +693,8 @@ export function AdminKnowledgePage() {
               <button
                 type="button"
                 onClick={() => {
-                  const result = knowledgeUrlDocumentSchema.safeParse(urlForm)
+                  const backendForm = toBackendDocumentForm(urlForm)
+                  const result = knowledgeUrlDocumentSchema.safeParse(backendForm)
                   const errs = extractFieldErrors(result)
                   if (Object.keys(errs).length > 0) {
                     setUrlErrors(errs)
