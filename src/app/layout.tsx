@@ -9,6 +9,9 @@ export const metadata: Metadata = {
   title: 'SaludDeUna',
   description:
     'Plataforma de comunicación médica para optimizar el flujo de trabajo clínico',
+  icons: {
+    icon: '/images/SaludDeUnaLogoPrincipal.png',
+  },
 }
 
 export default function RootLayout({
