@@ -1,6 +1,6 @@
 'use client'
 
-import { Sparkles } from 'lucide-react'
+import { AlertTriangle, ClipboardList, Sparkles, ThumbsDown, ThumbsUp } from 'lucide-react'
 import { useState } from 'react'
 
 interface Props {
@@ -45,24 +45,32 @@ export function ClinicalSummaryPanel({
   const [comment, setComment] = useState('')
 
   return (
-    <div className="flex h-full flex-col gap-4 overflow-y-auto">
+    <div className="flex h-full min-h-[620px] flex-col gap-4 overflow-y-auto">
       {triage?.analysis && (
-        <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-          <h4 className="mb-3 text-sm font-bold text-slate-900">Datos del triage</h4>
+        <div className="rounded-2xl border border-white/80 bg-white/90 p-4 shadow-[0_16px_45px_rgba(15,118,110,0.08)] backdrop-blur-xl">
+          <div className="mb-3 flex items-center gap-2">
+            <div className="rounded-xl bg-teal-50 p-2 text-teal-600">
+              <ClipboardList className="h-4 w-4" />
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-slate-950">Triage estructurado</h4>
+              <p className="text-xs text-slate-400">Datos capturados antes de la atención</p>
+            </div>
+          </div>
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
               <span className="text-xs text-slate-500">Prioridad:</span>
-              <span className="text-xs font-bold text-slate-900">{triage.analysis.priority}</span>
+              <span className="text-xs font-black text-slate-900">{triage.analysis.priority}</span>
             </div>
             {triage.analysis.redFlags?.length
               ? (
-                <div>
-                  <p className="mb-1 text-xs text-red-600 font-semibold">Señales de alarma:</p>
+                <div className="rounded-xl border border-red-100 bg-red-50 p-3">
+                  <p className="mb-2 flex items-center gap-1.5 text-xs font-black text-red-700">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    Señales de alarma
+                  </p>
                   {triage.analysis.redFlags.map(rf => (
-                    <p key={rf.evidence} className="text-xs text-red-700">
-                      •
-                      {rf.evidence}
-                    </p>
+                    <p key={rf.evidence} className="rounded-lg bg-white/70 px-2 py-1.5 text-xs text-red-700">{rf.evidence}</p>
                   ))}
                 </div>
               )
@@ -78,7 +86,7 @@ export function ClinicalSummaryPanel({
                 </summary>
                 <div className="mt-2 space-y-2">
                   {triage.answers.map(a => (
-                    <div key={a.questionText} className="rounded-lg bg-slate-50 p-2">
+                    <div key={a.questionText} className="rounded-lg bg-slate-50 p-2.5">
                       <p className="text-xs text-slate-500">{a.questionText}</p>
                       <p className="text-xs font-semibold text-slate-900">{String(a.answerValue)}</p>
                     </div>
@@ -90,13 +98,17 @@ export function ClinicalSummaryPanel({
         </div>
       )}
 
-      <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+      <div className="rounded-2xl border border-white/80 bg-white/90 p-4 shadow-[0_16px_45px_rgba(15,118,110,0.08)] backdrop-blur-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h4 className="text-sm font-bold text-slate-900">Resumen clínico IA</h4>
+          <div>
+            <h4 className="text-sm font-black text-slate-950">Resumen clínico IA</h4>
+            <p className="text-xs text-slate-400">Apoyo de lectura rápida, no diagnóstico</p>
+          </div>
           <button
+            type="button"
             onClick={onGenerate}
             disabled={disabled || isGenerating}
-            className="flex items-center gap-1.5 rounded-lg bg-linear-to-r from-teal-500 to-cyan-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-all hover:opacity-90 disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-xl bg-linear-to-r from-teal-500 to-cyan-600 px-3 py-2 text-xs font-black text-white shadow-sm transition-all hover:opacity-90 disabled:opacity-50"
           >
             <Sparkles className="h-3.5 w-3.5" />
             {isGenerating ? 'Generando...' : 'Generar con IA'}
@@ -118,7 +130,7 @@ export function ClinicalSummaryPanel({
             <div className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800">
               Resumen generado como apoyo clínico. Debe ser revisado y validado por el médico antes de tomar decisiones.
             </div>
-            <p className="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap">{summary}</p>
+            <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm leading-relaxed text-slate-700 whitespace-pre-wrap">{summary}</p>
             {citations?.length
               ? (
                 <div className="rounded-xl border border-cyan-100 bg-cyan-50/60 p-3">
@@ -156,13 +168,16 @@ export function ClinicalSummaryPanel({
                 ].map(option => (
                   <button
                     key={option.value}
-                    onClick={() => onFeedback({ value: option.value as Props['feedbackValue'] extends infer T ? Extract<T, string> : never, comment: comment || undefined })}
+                    type="button"
+                    onClick={() => onFeedback({ value: option.value as 'USEFUL' | 'PARTIALLY_USEFUL' | 'NOT_USEFUL', comment: comment || undefined })}
                     className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors ${
                       feedbackValue === option.value
                         ? 'border-teal-500 bg-teal-500 text-white'
                         : 'border-slate-200 bg-white text-slate-600 hover:border-teal-300'
                     }`}
                   >
+                    {option.value === 'USEFUL' && <ThumbsUp className="mr-1 inline h-3.5 w-3.5" />}
+                    {option.value === 'NOT_USEFUL' && <ThumbsDown className="mr-1 inline h-3.5 w-3.5" />}
                     {option.label}
                   </button>
                 ))}

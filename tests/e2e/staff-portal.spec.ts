@@ -17,7 +17,7 @@ test('admin legacy login reaches the admin dashboard', async ({ page }) => {
 test('doctor legacy login reaches the doctor portal', async ({ page }) => {
   await login(page, 'doctor@saluddeuna.test')
   await expect(page).toHaveURL(/\/doctor/)
-  await expect(page.getByText('Funcionalidades disponibles')).toBeVisible()
+  await expect(page.getByText('Portal médico')).toBeVisible()
   await expect(page.getByText('Cola de Consultas')).toBeVisible()
 })
 
@@ -44,7 +44,7 @@ test('admin can complete full REThUS verification form', async ({ page }) => {
 test('doctor can take a queued consultation and see clinical detail', async ({ page }) => {
   await login(page, 'doctor@saluddeuna.test')
   await page.goto('/doctor/queue')
-  await page.getByRole('button', { name: 'Tomar caso' }).click()
+  await page.getByRole('button', { name: 'Atender' }).first().click()
   await expect(page).toHaveURL(/\/doctor\/consultations\/507f1f77bcf86cd799439022/)
   await expect(page.getByText('Chat clínico')).toBeVisible()
   await expect(page.getByText('Resumen clínico IA')).toBeVisible()

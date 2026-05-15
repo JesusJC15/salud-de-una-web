@@ -3,11 +3,15 @@
 import {
   Activity,
   AlertTriangle,
-  ChevronRight,
+  ArrowRight,
+  CheckCircle2,
+  Clock,
   History,
   LogOut,
   PauseCircle,
   RefreshCw,
+  Stethoscope,
+  TrendingUp,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
@@ -16,68 +20,156 @@ import { DashboardBrandMark } from '@/components/dashboard/dashboard-brand-mark'
 import { NotificationBell } from '@/components/notification-bell'
 import { useConsultationQueue } from '@/features/doctor-queue/hooks/use-consultation-queue'
 import { useDoctorAvailability } from '@/features/doctor-queue/hooks/use-doctor-availability'
+import { useDoctorHistory } from '@/features/doctor-queue/hooks/use-doctor-history'
 import { doctorService } from '@/features/doctor-queue/services/doctor-service'
 import { authService } from '@/services/auth-service'
+import { translateSpecialty } from '@/utils/specialty-labels'
 
-interface FeatureCardProps {
+// ─── Quick Action Card ──────────────────────────────────────────────────────
+
+interface QuickActionProps {
   href: string
   icon: React.ElementType
   title: string
   description: string
   badge?: string | number | null
-  accent: 'teal' | 'cyan' | 'slate'
+  variant: 'primary' | 'secondary' | 'ghost'
 }
 
-const ACCENT_MAP = {
-  teal: {
-    bg: 'bg-teal-50 hover:bg-teal-100/60',
-    icon: 'bg-teal-500 text-white',
-    badge: 'bg-teal-100 text-teal-700',
-    chevron: 'text-teal-400',
-  },
-  cyan: {
-    bg: 'bg-cyan-50 hover:bg-cyan-100/60',
-    icon: 'bg-cyan-500 text-white',
-    badge: 'bg-cyan-100 text-cyan-700',
-    chevron: 'text-cyan-400',
-  },
-  slate: {
-    bg: 'bg-slate-50 hover:bg-slate-100/60',
-    icon: 'bg-slate-700 text-white',
-    badge: 'bg-slate-200 text-slate-700',
-    chevron: 'text-slate-400',
-  },
-}
+function QuickAction({ href, icon: Icon, title, description, badge, variant }: QuickActionProps) {
+  const styles = {
+    primary: {
+      outer: 'bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-[0_8px_32px_rgba(20,184,166,0.30)] hover:shadow-[0_12px_40px_rgba(20,184,166,0.40)] hover:-translate-y-0.5',
+      icon: 'bg-white/20',
+      title: 'text-white',
+      desc: 'text-teal-100',
+      badge: 'bg-white/25 text-white',
+      arrow: 'text-white/70',
+    },
+    secondary: {
+      outer: 'bg-white border border-slate-100 hover:border-teal-200 hover:shadow-[0_4px_24px_rgba(20,184,166,0.10)]',
+      icon: 'bg-teal-50 text-teal-600',
+      title: 'text-slate-900',
+      desc: 'text-slate-500',
+      badge: 'bg-teal-100 text-teal-700',
+      arrow: 'text-teal-400',
+    },
+    ghost: {
+      outer: 'bg-slate-50 border border-slate-100 hover:bg-white hover:border-slate-200 hover:shadow-sm',
+      icon: 'bg-slate-200 text-slate-600',
+      title: 'text-slate-800',
+      desc: 'text-slate-500',
+      badge: 'bg-slate-200 text-slate-600',
+      arrow: 'text-slate-400',
+    },
+  }
+  const s = styles[variant]
 
-function FeatureCard({ href, icon: Icon, title, description, badge, accent }: FeatureCardProps) {
-  const c = ACCENT_MAP[accent]
   return (
-    <Link href={href} className={`group flex items-center gap-5 rounded-2xl border border-transparent ${c.bg} p-5 transition-all hover:shadow-[0_4px_24px_rgba(20,184,166,0.10)]`}>
-      <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${c.icon} shadow-sm`}>
-        <Icon className="h-7 w-7" />
+    <Link
+      href={href}
+      className={`group flex items-center gap-4 rounded-2xl p-5 transition-all ${s.outer}`}
+    >
+      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${s.icon}`}>
+        <Icon className="h-6 w-6" />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <p className="text-base font-black text-slate-900">{title}</p>
+          <p className={`text-sm font-bold ${s.title}`}>{title}</p>
           {badge != null && (
-            <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${c.badge}`}>
+            <span className={`rounded-full px-2 py-0.5 text-xs font-black ${s.badge}`}>
               {badge}
             </span>
           )}
         </div>
-        <p className="mt-0.5 text-sm text-slate-500">{description}</p>
+        <p className={`mt-0.5 text-xs ${s.desc}`}>{description}</p>
       </div>
-      <ChevronRight className={`h-5 w-5 shrink-0 transition-transform group-hover:translate-x-0.5 ${c.chevron}`} />
+      <ArrowRight className={`h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5 ${s.arrow}`} />
     </Link>
   )
 }
 
+// ─── KPI Mini Card ──────────────────────────────────────────────────────────
+
+function KpiMini({
+  value,
+  label,
+  color,
+  icon: Icon,
+}: {
+  value: number | string
+  label: string
+  color: string
+  icon: React.ElementType
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_2px_12px_rgba(20,184,166,0.06)]">
+      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${color}`}>
+        <Icon className="h-5 w-5" />
+      </div>
+      <div>
+        <p className="text-xl font-black text-slate-900 leading-none">{value}</p>
+        <p className="mt-1 text-xs font-medium text-slate-400">{label}</p>
+      </div>
+    </div>
+  )
+}
+
+// ─── Availability Toggle Button ─────────────────────────────────────────────
+
+function AvailabilityToggle({
+  availability,
+  isUpdating,
+  toggle,
+}: {
+  availability: string | null
+  isUpdating: boolean
+  toggle: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      disabled={isUpdating}
+      title={availability === 'AVAILABLE' ? 'Pausar disponibilidad' : 'Reanudar disponibilidad'}
+      className={`flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-bold transition-all disabled:opacity-60 ${
+        availability === 'AVAILABLE'
+          ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 ring-1 ring-emerald-200'
+          : 'bg-amber-50 text-amber-700 hover:bg-amber-100 ring-1 ring-amber-200'
+      }`}
+    >
+      {availability === 'AVAILABLE'
+        ? (
+          <>
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+            </span>
+            Disponible
+          </>
+        )
+        : (
+          <>
+            <PauseCircle className="h-3.5 w-3.5" />
+            En pausa
+          </>
+        )}
+    </button>
+  )
+}
+
+// ─── Main ───────────────────────────────────────────────────────────────────
+
 export function DoctorPortalPage() {
   const { availability, doctorName, specialty, doctorStatus, isUpdating, toggle } = useDoctorAvailability()
   const { data: queueData, isLoading: queueLoading } = useConsultationQueue()
+  const { data: historyData } = useDoctorHistory(1, 'CLOSED')
   const [resubmitting, setResubmitting] = useState(false)
 
   const pendingCount = queueData?.items.length ?? 0
+  const highCount = queueData?.items.filter(i => i.priority === 'HIGH').length ?? 0
+  const closedTotal = historyData?.total ?? 0
+
   const greeting = (() => {
     const hour = new Date().getHours()
     return hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches'
@@ -111,15 +203,13 @@ export function DoctorPortalPage() {
 
       {/* ── Header ── */}
       <div className="sticky top-0 z-10 border-b border-teal-100/60 bg-white/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-2xl flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-4">
             <DashboardBrandMark />
+            <div className="h-5 w-px bg-slate-200" />
             <div>
-              <p className="text-xs font-medium text-slate-400">
-                {greeting}
-                ,
-              </p>
-              <h1 className="font-manrope text-lg font-black tracking-tight text-slate-900">
+              <p className="text-xs font-medium text-slate-400">{greeting}</p>
+              <h1 className="font-manrope text-base font-black tracking-tight text-slate-900 leading-none mt-0.5">
                 Dr.
                 {' '}
                 {doctorName || 'Doctor'}
@@ -129,31 +219,11 @@ export function DoctorPortalPage() {
 
           <div className="flex items-center gap-3">
             <NotificationBell />
-            <button
-              type="button"
-              onClick={toggle}
-              disabled={isUpdating}
-              title={availability === 'AVAILABLE' ? 'Pausar disponibilidad' : 'Reanudar disponibilidad'}
-              className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-colors disabled:opacity-60 ${
-                availability === 'AVAILABLE'
-                  ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
-                  : 'bg-amber-50 text-amber-600 hover:bg-amber-100'
-              }`}
-            >
-              {availability === 'AVAILABLE'
-                ? (
-                  <>
-                    <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
-                    Disponible
-                  </>
-                )
-                : (
-                  <>
-                    <PauseCircle className="h-3.5 w-3.5" />
-                    En pausa
-                  </>
-                )}
-            </button>
+            <AvailabilityToggle
+              availability={availability}
+              isUpdating={isUpdating}
+              toggle={toggle}
+            />
             <button
               type="button"
               onClick={() => void handleLogout()}
@@ -166,21 +236,30 @@ export function DoctorPortalPage() {
         </div>
       </div>
 
-      {/* ── Content ── */}
-      <div className="mx-auto max-w-2xl space-y-6 px-6 py-8">
+      <div className="mx-auto max-w-5xl space-y-6 px-6 py-8">
 
-        {/* Verification status banner */}
+        {/* ── Verification Banners ── */}
         {(doctorStatus === 'PENDING' || doctorStatus === 'REJECTED') && (
-          <div className={`flex items-start gap-3 rounded-2xl border px-4 py-3 ${doctorStatus === 'REJECTED' ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50'}`}>
-            <AlertTriangle className={`mt-0.5 h-5 w-5 shrink-0 ${doctorStatus === 'REJECTED' ? 'text-red-500' : 'text-amber-500'}`} />
+          <div className={`flex items-start gap-4 rounded-2xl border p-4 ${
+            doctorStatus === 'REJECTED'
+              ? 'border-red-200 bg-red-50'
+              : 'border-amber-200 bg-amber-50'
+          }`}
+          >
+            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+              doctorStatus === 'REJECTED' ? 'bg-red-100' : 'bg-amber-100'
+            }`}
+            >
+              <AlertTriangle className={`h-5 w-5 ${doctorStatus === 'REJECTED' ? 'text-red-500' : 'text-amber-500'}`} />
+            </div>
             <div className="flex-1">
-              <p className={`text-sm font-semibold ${doctorStatus === 'REJECTED' ? 'text-red-700' : 'text-amber-700'}`}>
+              <p className={`text-sm font-bold ${doctorStatus === 'REJECTED' ? 'text-red-800' : 'text-amber-800'}`}>
                 {doctorStatus === 'REJECTED' ? 'Verificación REThUS rechazada' : 'Verificación REThUS pendiente'}
               </p>
-              <p className={`mt-0.5 text-xs ${doctorStatus === 'REJECTED' ? 'text-red-600' : 'text-amber-600'}`}>
+              <p className={`mt-0.5 text-xs leading-relaxed ${doctorStatus === 'REJECTED' ? 'text-red-600' : 'text-amber-600'}`}>
                 {doctorStatus === 'REJECTED'
                   ? 'Tu verificación fue rechazada. Podés solicitar una revisión al equipo de administración.'
-                  : 'Tu cuenta está pendiente de verificación. Podés atender consultas una vez que sea aprobada.'}
+                  : 'Tu cuenta está pendiente de verificación. Podrás atender consultas una vez que sea aprobada.'}
               </p>
             </div>
             {doctorStatus === 'REJECTED' && (
@@ -188,7 +267,7 @@ export function DoctorPortalPage() {
                 type="button"
                 onClick={() => void handleRethusResubmit()}
                 disabled={resubmitting}
-                className="ml-auto flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-60"
+                className="flex shrink-0 items-center gap-1.5 rounded-xl bg-red-600 px-3 py-2 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-60"
               >
                 <RefreshCw className={`h-3.5 w-3.5 ${resubmitting ? 'animate-spin' : ''}`} />
                 {resubmitting ? 'Enviando...' : 'Solicitar revisión'}
@@ -197,64 +276,129 @@ export function DoctorPortalPage() {
           </div>
         )}
 
-        {/* Availability banner when paused */}
+        {/* ── Pausa Banner ── */}
         {availability === 'PAUSED' && (
-          <div className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-            <PauseCircle className="h-5 w-5 shrink-0 text-amber-500" />
-            <p className="text-sm font-medium text-amber-700">
+          <div className="flex items-center gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100">
+              <PauseCircle className="h-5 w-5 text-amber-500" />
+            </div>
+            <p className="flex-1 text-sm font-medium text-amber-800">
               Estás en pausa. Los pacientes siguen en cola pero no recibirás asignaciones automáticas.
             </p>
-            <button type="button" onClick={toggle} className="ml-auto text-xs font-bold text-amber-700 underline">
+            <button
+              type="button"
+              onClick={toggle}
+              className="shrink-0 rounded-xl bg-amber-600 px-3 py-2 text-xs font-bold text-white hover:bg-amber-700"
+            >
               Reanudar
             </button>
           </div>
         )}
 
-        {/* Welcome card */}
-        <div className="rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 p-6 text-white shadow-[0_4px_32px_rgba(20,184,166,0.25)]">
-          <p className="text-sm font-medium text-teal-100">Panel de trabajo</p>
-          <h2 className="mt-1 font-manrope text-2xl font-black tracking-tight">
-            SaludDeUna
-          </h2>
-          {specialty && (
-            <p className="mt-2 text-sm font-semibold text-teal-100 opacity-90">
-              {specialty.replace('_', ' ').toLowerCase().replace(/^\w/, c => c.toUpperCase())}
-            </p>
-          )}
-          <div className="mt-4 flex items-center gap-4">
-            <div className="rounded-xl bg-white/20 px-3 py-2 text-center">
-              <p className="text-2xl font-black">
-                {queueLoading ? '–' : pendingCount}
-              </p>
-              <p className="text-xs font-semibold text-teal-100">En cola</p>
+        {/* ── Hero / Welcome ── */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-teal-500 via-teal-600 to-cyan-700 p-7 shadow-[0_8px_40px_rgba(20,184,166,0.28)]">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/45" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-28 bg-white/10" />
+          <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20">
+                  <Stethoscope className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-teal-100 uppercase tracking-widest">Portal médico</p>
+                  <h2 className="font-manrope text-2xl font-black text-white leading-tight">
+                    SaludDeUna
+                  </h2>
+                </div>
+              </div>
+              {specialty && (
+                <div className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white/15 px-3 py-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-teal-200" />
+                  <span className="text-sm font-semibold text-white">
+                    {translateSpecialty(specialty)}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Queue indicator */}
+            <div className="flex gap-3">
+              <div className="rounded-2xl bg-white/15 px-5 py-3 text-center backdrop-blur-sm">
+                {queueLoading
+                  ? <div className="mx-auto h-7 w-8 animate-pulse rounded bg-white/20" />
+                  : <p className="text-3xl font-black text-white leading-none">{pendingCount}</p>}
+                <p className="mt-1 text-xs font-semibold text-teal-100">En cola</p>
+              </div>
+              {!queueLoading && highCount > 0 && (
+                <div className="rounded-2xl bg-red-500/30 px-5 py-3 text-center backdrop-blur-sm ring-1 ring-red-400/30">
+                  <p className="text-3xl font-black text-white leading-none">{highCount}</p>
+                  <p className="mt-1 text-xs font-semibold text-red-200">Alta prioridad</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Section title */}
+        {/* ── KPI Bar ── */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <KpiMini
+            value={queueLoading ? '–' : pendingCount}
+            label="Pendientes ahora"
+            color="bg-teal-50 text-teal-600"
+            icon={Activity}
+          />
+          <KpiMini
+            value={queueLoading ? '–' : highCount}
+            label="Alta prioridad"
+            color="bg-red-50 text-red-500"
+            icon={AlertTriangle}
+          />
+          <KpiMini
+            value={closedTotal}
+            label="Consultas cerradas"
+            color="bg-cyan-50 text-cyan-600"
+            icon={TrendingUp}
+          />
+        </div>
+
+        {/* ── Quick Actions ── */}
         <div>
-          <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">
-            Funcionalidades disponibles
+          <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-400">
+            Acceso rápido
           </h2>
           <div className="space-y-3">
-            <FeatureCard
+            <QuickAction
               href="/doctor/queue"
               icon={Activity}
               title="Cola de Consultas"
-              description="Ver y atender consultas pendientes en tiempo real"
+              description={
+                pendingCount > 0
+                  ? `${pendingCount} paciente${pendingCount > 1 ? 's' : ''} esperando atención${highCount > 0 ? ` · ${highCount} de alta prioridad` : ''}`
+                  : 'Ver y atender consultas pendientes en tiempo real'
+              }
               badge={!queueLoading && pendingCount > 0 ? pendingCount : null}
-              accent="teal"
+              variant="primary"
             />
-            <FeatureCard
+            <QuickAction
               href="/doctor/history"
               icon={History}
               title="Historial de Consultas"
-              description="Revisá tus consultas cerradas y resúmenes clínicos anteriores"
-              accent="cyan"
+              description="Revisá tus consultas cerradas, resúmenes clínicos y métricas de atención"
+              badge={closedTotal > 0 ? closedTotal : null}
+              variant="secondary"
             />
           </div>
         </div>
 
+        {/* ── Status Footer ── */}
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white/60 px-4 py-3">
+          <Clock className="h-4 w-4 shrink-0 text-slate-400" />
+          <p className="text-xs text-slate-500">
+            Cola actualizada automáticamente cada 30 segundos.
+            {availability === 'AVAILABLE' && ' Recibirás asignaciones automáticas.'}
+          </p>
+        </div>
       </div>
     </div>
   )
