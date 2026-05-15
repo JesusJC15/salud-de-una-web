@@ -50,6 +50,18 @@ test('doctor can take a queued consultation and see clinical detail', async ({ p
   await expect(page.getByText('Resumen clínico IA')).toBeVisible()
 })
 
+test('doctor has return paths from queue and patient timeline', async ({ page }) => {
+  await login(page, 'doctor@saluddeuna.test')
+
+  await page.goto('/doctor/queue')
+  await page.getByRole('link', { name: 'Panel' }).click()
+  await expect(page).toHaveURL(/\/doctor$/)
+
+  await page.goto('/doctor/patients/507f1f77bcf86cd799439033/timeline')
+  await page.getByRole('link', { name: 'Volver a la cola' }).click()
+  await expect(page).toHaveURL(/\/doctor\/queue/)
+})
+
 for (const width of [
   390,
   768,

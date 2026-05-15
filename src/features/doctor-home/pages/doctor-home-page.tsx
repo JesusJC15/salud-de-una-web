@@ -450,8 +450,14 @@ export function DoctorHomePage() {
           <div className="flex items-center gap-3">
             <NotificationBell />
             <Link
+              href="/doctor"
+              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-teal-300 hover:text-teal-600"
+            >
+              Panel
+            </Link>
+            <Link
               href="/doctor/history"
-              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-teal-300 hover:text-teal-600 transition-colors"
+              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-teal-300 hover:text-teal-600"
             >
               Historial
             </Link>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useAuth0 } from '@auth0/auth0-react'
-import { CheckCircle, Sparkles, UserPlus } from 'lucide-react'
+import { CheckCircle, UserPlus } from 'lucide-react'
 import { motion } from 'motion/react'
 import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -76,10 +76,10 @@ export function LoginPage() {
         <div className="relative z-10 max-w-lg space-y-8 text-center">
           <motion.div className="flex justify-center" variants={staggerItem}>
             <Image
-              src="/images/SaludDeUnaLogoPrincipal.png"
+              src="/images/SaludDeUnaLogoBanner.png"
               alt="SaludDeUna"
-              width={260}
-              height={84}
+              width={200}
+              height={50}
               priority
               className="h-auto w-full max-w-[260px] drop-shadow-sm"
             />
@@ -106,9 +106,15 @@ export function LoginPage() {
 
       <motion.div className="flex flex-1 flex-col justify-center bg-white px-6 py-12 lg:px-24" variants={pageReveal}>
         <motion.div className="sm:mx-auto sm:w-full sm:max-w-md" variants={staggerParent}>
-          <motion.div className="mb-12 flex items-center gap-3 lg:hidden" variants={staggerItem}>
-            <Sparkles className="h-8 w-8 text-teal-500" />
-            <h2 className="text-xl font-bold tracking-tight">SaludDeUna</h2>
+          <motion.div className="mb-10 flex justify-center lg:hidden" variants={staggerItem}>
+            <Image
+              src="/images/SaludDeUnaLogoBanner.png"
+              alt="SaludDeUna"
+              width={220}
+              height={56}
+              priority
+              className="h-auto w-full max-w-[220px]"
+            />
           </motion.div>
 
           <motion.div className="space-y-2" variants={staggerItem}>
