@@ -113,6 +113,18 @@ function translateAdminSpecialty(specialty: string | undefined) {
   return BACKEND_TO_SPECIALTY[specialty] ?? specialty
 }
 
+const SOURCE_STATUS_LABELS: Record<string, string> = {
+  ACTIVE: 'Activa',
+  INACTIVE: 'Inactiva',
+}
+
+const DOCUMENT_STATUS_LABELS: Record<string, string> = {
+  APPROVED: 'Aprobado',
+  READY_FOR_REVIEW: 'Pendiente revisión',
+  FAILED: 'Error',
+  PENDING: 'Pendiente',
+}
+
 function toBackendSourceForm(form: KnowledgeSourceForm) {
   return {
     ...form,
@@ -734,7 +746,7 @@ export function AdminKnowledgePage() {
                         </p>
                       </div>
                       <span className={`rounded-full px-2 py-1 text-[11px] font-bold ${source.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                        {source.status}
+                        {SOURCE_STATUS_LABELS[source.status] ?? source.status}
                       </span>
                     </div>
                   </div>
@@ -779,7 +791,7 @@ export function AdminKnowledgePage() {
                               : 'bg-slate-200 text-slate-700'
                       }`}
                       >
-                        {document.status}
+                        {DOCUMENT_STATUS_LABELS[document.status] ?? document.status}
                       </span>
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">

@@ -24,6 +24,20 @@ import { useAiMetrics, useBusinessMetrics, useConsultationMetrics, useDashboardA
 import { authService } from '@/services/auth-service'
 import { translateSpecialty } from '@/utils/specialty-labels'
 
+// ─── i18n maps ─────────────────────────────────────────────────────────────
+
+const KPI_STATE_LABELS: Record<string, string> = {
+  OK: 'Óptimo',
+  WARNING: 'Advertencia',
+  CRITICAL: 'Crítico',
+}
+
+const HEALTH_STATUS_LABELS: Record<string, string> = {
+  up: 'Operativo',
+  degraded: 'Degradado',
+  down: 'Caído',
+}
+
 // ─── helpers ───────────────────────────────────────────────────────────────
 
 function fmt(n: number | undefined): string {
@@ -470,7 +484,7 @@ export function AdminHomePage() {
                             : 'bg-red-100 text-red-700'
                       }`}
                       >
-                        {kpi.state}
+                        {KPI_STATE_LABELS[kpi.state] ?? kpi.state}
                       </span>
                     </div>
                     <div className="mt-4 flex items-end justify-between">
@@ -521,7 +535,7 @@ export function AdminHomePage() {
             <KpiCard
               label="Latencia P95"
               value={tech ? latency(tech.p95LatencyMs) : '—'}
-              sub={tech && !tech.degraded ? 'nominal' : undefined}
+              sub={tech && !tech.degraded ? 'normal' : undefined}
               icon={Zap}
               accent={tech && tech.p95LatencyMs > 1500 ? 'amber' : 'green'}
               loading={techLoading}
@@ -845,7 +859,7 @@ export function AdminHomePage() {
                   <span
                     className={`ml-auto shrink-0 text-[11px] ${valueClass}`}
                   >
-                    {value ?? '—'}
+                    {value ? (HEALTH_STATUS_LABELS[value] ?? value) : '—'}
                   </span>
                 </div>
               )

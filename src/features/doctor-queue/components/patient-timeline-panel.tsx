@@ -14,6 +14,16 @@ const EVENT_COLORS: Record<string, string> = {
   PRIORITY_ESCALATED: 'bg-red-100 text-red-700',
 }
 
+const EVENT_LABELS: Record<string, string> = {
+  TRIAGE_COMPLETED: 'Triaje completado',
+  CONSULTATION_ASSIGNED: 'Consulta asignada',
+  CONSULTATION_CLOSED: 'Consulta cerrada',
+  FOLLOWUP_CREATED: 'Seguimiento creado',
+  FOLLOWUP_DUE: 'Seguimiento pendiente',
+  FOLLOWUP_COMPLETED: 'Seguimiento completado',
+  PRIORITY_ESCALATED: 'Prioridad escalada',
+}
+
 const TIMELINE_SKELETON_KEYS = [
   'timeline-skeleton-1',
   'timeline-skeleton-2',
@@ -84,7 +94,7 @@ export function PatientTimelinePanel({ patientId }: { patientId: string }) {
                 {items.map(item => (
                   <div key={item.id} className="flex gap-3 rounded-xl border border-slate-100 bg-white/70 p-3 transition-colors hover:border-teal-100 hover:bg-teal-50/30">
                     <div className={`mt-0.5 h-fit rounded-full px-2 py-1 text-[10px] font-black ${EVENT_COLORS[item.type] ?? 'bg-slate-100 text-slate-700'}`}>
-                      {item.type.replaceAll('_', ' ')}
+                      {EVENT_LABELS[item.type] ?? item.type.replaceAll('_', ' ')}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-slate-900">{item.title}</p>

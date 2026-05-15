@@ -34,6 +34,6 @@ test.describe('legacy login — real backend (Railway)', () => {
     await navPromise
 
     await expect(page).toHaveURL(/\/doctor/)
-    await expect(page.getByText('Funcionalidades disponibles')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText('Portal médico')).toBeVisible({ timeout: 10_000 })
   })
 })

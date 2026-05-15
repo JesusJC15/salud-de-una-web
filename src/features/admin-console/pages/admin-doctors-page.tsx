@@ -15,6 +15,12 @@ const STATUS_OPTIONS = [
   { value: 'REJECTED', label: 'Rechazado' },
 ]
 
+const DOCTOR_STATUS_LABELS: Record<string, string> = {
+  PENDING: 'Pendiente',
+  VERIFIED: 'Verificado',
+  REJECTED: 'Rechazado',
+}
+
 export function AdminDoctorsPage() {
   const [page, setPage] = useState(1)
   const [statusFilter, setStatusFilter] = useState('')
@@ -234,7 +240,7 @@ export function AdminDoctorsPage() {
                                   : 'bg-red-100 text-red-700'
                             }`}
                           >
-                            {item.doctorStatus}
+                            {DOCTOR_STATUS_LABELS[item.doctorStatus] ?? item.doctorStatus}
                           </span>
                         </td>
 
