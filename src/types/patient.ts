@@ -6,6 +6,8 @@ export interface UpdatePatientProfileDto {
   lastName?: string
   birthDate?: IsoDateString
   gender?: UserGender
+  heightCm?: number
+  weightKg?: number
 }
 
 export interface Patient {
@@ -16,6 +18,8 @@ export interface Patient {
   role: UserRole
   birthDate?: IsoDateString | null
   gender?: UserGender
+  heightCm?: number | null
+  weightKg?: number | null
   isActive: boolean
   createdAt?: IsoDateString | null
   updatedAt?: IsoDateString | null
@@ -29,6 +33,8 @@ export interface PatientProfileResponseDto {
   role: UserRole
   birthDate: IsoDateString | null
   gender?: UserGender
+  heightCm?: number | null
+  weightKg?: number | null
   createdAt: IsoDateString | null
   updatedAt: IsoDateString | null
 }
