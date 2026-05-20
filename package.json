@@ -21,7 +21,10 @@
     "test:cov": "jest --coverage",
     "check:lint": "eslint .",
     "fix:lint": "eslint . --fix",
-    "check:types": "tsc --project tsconfig.json --pretty --noEmit"
+    "check:types": "tsc --project tsconfig.json --pretty --noEmit",
+    "deploy": "bash deploy/deploy.sh",
+    "deploy:build": "bash deploy/deploy.sh --only-build",
+    "deploy:verify": "bash deploy/deploy.sh --verify"
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.16.2",

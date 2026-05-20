@@ -1,0 +1,97 @@
+name: Deploy Web to AWS
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Este workflow se dispara DESPUÉS de que "CI" pasa en main.
+# Usa AWS CodeBuild para construir la imagen Docker Next.js y desplegarla en ECS.
+#
+# NOTA: Las variables NEXT_PUBLIC_* se bakean en la imagen durante el build de
+# CodeBuild (no en este workflow). El DNS del ALB ya está configurado en el
+# proyecto CodeBuild por Terraform.
+#
+# REQUISITOS (GitHub → Settings → Secrets and variables → Actions):
+#
+#   Secrets (renovar cada sesión de Learner Lab, ~4 horas):
+#     AWS_ACCESS_KEY_ID      → de "AWS Details" → "Show" en la consola del Learner Lab
+#     AWS_SECRET_ACCESS_KEY  → ídem
+#     AWS_SESSION_TOKEN      → ídem  ← obligatorio en Learner Lab
+#
+#   Variables (configurar una sola vez):
+#     AWS_REGION             = us-east-1
+#     CODEBUILD_WEB_PROJECT  = salud-de-una-dev-build-web
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  # Auto: se dispara cuando CI termina exitosamente en main
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+  # Manual: GitHub → Actions → Deploy Web to AWS → Run workflow
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy a AWS ECS (via CodeBuild)
+    runs-on: ubuntu-latest
+
+    # Para workflow_run: solo si el CI pasó. Para workflow_dispatch: siempre.
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - name: Configurar credenciales AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+      - name: Iniciar build del Web en CodeBuild
+        id: start-build
+        run: |
+          BUILD_ID=$(aws codebuild start-build \
+            --project-name "${{ vars.CODEBUILD_WEB_PROJECT || 'salud-de-una-dev-build-web' }}" \
+            --region "${{ vars.AWS_REGION || 'us-east-1' }}" \
+            --query 'build.id' \
+            --output text)
+          echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
+          echo "Web CodeBuild iniciado: $BUILD_ID"
+          echo "Logs en vivo: AWS Console → CodeBuild → Build history"
+
+      - name: Esperar que el build complete
+        run: |
+          BUILD_ID="${{ steps.start-build.outputs.build_id }}"
+          REGION="${{ vars.AWS_REGION || 'us-east-1' }}"
+
+          # Next.js tarda más → 50 intentos × 30s = 25 minutos máx
+          echo "Esperando build $BUILD_ID... (máx 25 minutos)"
+          for i in $(seq 1 50); do
+            STATUS=$(aws codebuild batch-get-builds \
+              --ids "$BUILD_ID" \
+              --region "$REGION" \
+              --query 'builds[0].buildStatus' \
+              --output text)
+            PHASE=$(aws codebuild batch-get-builds \
+              --ids "$BUILD_ID" \
+              --region "$REGION" \
+              --query 'builds[0].currentPhase' \
+              --output text 2>/dev/null || echo "")
+            echo "[$i/50] Status: $STATUS | Fase: $PHASE"
+            case "$STATUS" in
+              SUCCEEDED)
+                echo "✅ Build completado. ECS desplegando en background."
+                exit 0
+                ;;
+              FAILED|FAULT|TIMED_OUT|STOPPED)
+                echo "❌ Build falló: $STATUS"
+                echo "Ver logs: AWS Console → CodeBuild → salud-de-una-dev-build-web"
+                exit 1
+                ;;
+            esac
+            sleep 30
+          done
+          echo "⚠️ Timeout (25 min). Verifica manualmente en AWS Console."
+          exit 1
