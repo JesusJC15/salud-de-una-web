@@ -6,6 +6,7 @@
 Este deploy lee automáticamente la infraestructura compartida (ALB, ECS cluster, VPC, subnets) desde AWS SSM Parameter Store — sin copiar ni pegar valores.
 
 Si el backend no está desplegado:
+
 ```bash
 # En salud-de-una-backend:
 bash deploy/scripts/00-setup.sh
@@ -78,7 +79,7 @@ Si el token de GitHub ya está en SSM del backend, lo reutiliza automáticamente
 bash deploy/scripts/04-build.sh
 ```
 
-CodeBuild: clona el repo → `next build` con NEXT_PUBLIC_* bakeadas → push ECR → deploy ECS.
+CodeBuild: clona el repo → `next build` con NEXT*PUBLIC*\* bakeadas → push ECR → deploy ECS.
 
 ### 7. Verificar
 
@@ -88,12 +89,13 @@ bash deploy/scripts/05-verify.sh
 
 ---
 
-## Variables NEXT_PUBLIC_* — por qué se bakean en build time
+## Variables NEXT*PUBLIC*\* — por qué se bakean en build time
 
 Next.js bake las variables `NEXT_PUBLIC_*` en el bundle JavaScript durante el build.
 No pueden inyectarse en runtime como variables de entorno del contenedor.
 
 CodeBuild las pasa como `--build-arg` al `docker build`:
+
 - `NEXT_PUBLIC_API_BASE_URL` = `http://ALB_DNS/v1`
 - `NEXT_PUBLIC_AUTH0_DOMAIN` = tu tenant Auth0
 - `NEXT_PUBLIC_AUTH0_CLIENT_ID` = client ID de la SPA
@@ -122,23 +124,23 @@ bash deploy/scripts/04-build.sh
 bash deploy/scripts/fix-errors.sh
 ```
 
-| Problema | Solución |
-|---|---|
+| Problema                                                     | Solución                                             |
+| ------------------------------------------------------------ | ---------------------------------------------------- |
 | `01-configure.sh` falla con "no se encontro infraestructura" | Backend no desplegado — despliega el backend primero |
-| 502 al acceder a la app | Web aún iniciando (~30s) — esperar |
-| Imagen muestra URL incorrecta | ALB DNS cambió — rebuild: `04-build.sh` |
-| ECS task en STOPPED | JWT_SECRET faltante — `03-secrets.sh` |
+| 502 al acceder a la app                                      | Web aún iniciando (~30s) — esperar                   |
+| Imagen muestra URL incorrecta                                | ALB DNS cambió — rebuild: `04-build.sh`              |
+| ECS task en STOPPED                                          | JWT_SECRET faltante — `03-secrets.sh`                |
 
 ---
 
 ## Costos adicionales del web
 
-| Recurso | $/mes |
-|---|---|
-| ECS Fargate SPOT (1 task web) | ~$2-3 |
-| ECR web | ~$0.10 |
-| CloudWatch Logs web | ~$0.50 |
-| CodeBuild web | ~$0.10/build |
-| **Total adicional web** | **~$3-4** |
+| Recurso                       | $/mes        |
+| ----------------------------- | ------------ |
+| ECS Fargate SPOT (1 task web) | ~$2-3        |
+| ECR web                       | ~$0.10       |
+| CloudWatch Logs web           | ~$0.50       |
+| CodeBuild web                 | ~$0.10/build |
+| **Total adicional web**       | **~$3-4**    |
 
 El ALB ya está incluido en el backend. Costo total del stack: ~$27-31/mes.

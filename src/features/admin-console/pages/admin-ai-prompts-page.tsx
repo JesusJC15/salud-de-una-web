@@ -212,50 +212,50 @@ export default function AdminAiPromptsPage() {
               )
               : (
                 prompts.map(prompt => (
-                <tr key={prompt._id} className="group hover:bg-slate-50">
-                  <td className="px-4 py-3 font-mono text-xs text-slate-800 border-b border-slate-50">
-                    {prompt.key}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600 border-b border-slate-50">
-                    v
-                    {prompt.version}
-                  </td>
-                  <td className="px-4 py-3 text-slate-500 border-b border-slate-50">
-                    {prompt.model}
-                  </td>
-                  <td className="px-4 py-3 border-b border-slate-50">
-                    <button
-                      type="button"
-                      aria-label={prompt.active ? 'Desactivar prompt' : 'Activar prompt'}
-                      className={`relative inline-flex h-5 w-9 cursor-pointer rounded-full transition-colors ${
-                        prompt.active ? 'bg-teal-500' : 'bg-slate-300'
-                      }`}
-                      disabled={toggleActiveMutation.isPending}
-                      onClick={() => void handleToggle(prompt)}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 translate-y-0.5 rounded-full bg-white shadow transition-transform ${
-                          prompt.active ? 'translate-x-4' : 'translate-x-0.5'
+                  <tr key={prompt._id} className="group hover:bg-slate-50">
+                    <td className="px-4 py-3 font-mono text-xs text-slate-800 border-b border-slate-50">
+                      {prompt.key}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600 border-b border-slate-50">
+                      v
+                      {prompt.version}
+                    </td>
+                    <td className="px-4 py-3 text-slate-500 border-b border-slate-50">
+                      {prompt.model}
+                    </td>
+                    <td className="px-4 py-3 border-b border-slate-50">
+                      <button
+                        type="button"
+                        aria-label={prompt.active ? 'Desactivar prompt' : 'Activar prompt'}
+                        className={`relative inline-flex h-5 w-9 cursor-pointer rounded-full transition-colors ${
+                          prompt.active ? 'bg-teal-500' : 'bg-slate-300'
                         }`}
-                      />
-                    </button>
-                  </td>
-                  <td className="px-4 py-3 text-slate-400 border-b border-slate-50">
-                    {prompt.updatedAt ? new Date(prompt.updatedAt).toLocaleDateString('es-CO') : '—'}
-                  </td>
-                  {/* Celda de Acciones Fija */}
-                  <td className="sticky right-0 z-10 bg-white px-4 py-3 group-hover:bg-slate-50 transition-colors border-b border-slate-50 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]">
-                    <button
-                      type="button"
-                      className="rounded-lg bg-slate-800 px-3 py-1 text-xs text-white hover:bg-slate-700"
-                      onClick={() => openEdit(prompt)}
-                    >
-                      Editar
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
+                        disabled={toggleActiveMutation.isPending}
+                        onClick={() => void handleToggle(prompt)}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 translate-y-0.5 rounded-full bg-white shadow transition-transform ${
+                            prompt.active ? 'translate-x-4' : 'translate-x-0.5'
+                          }`}
+                        />
+                      </button>
+                    </td>
+                    <td className="px-4 py-3 text-slate-400 border-b border-slate-50">
+                      {prompt.updatedAt ? new Date(prompt.updatedAt).toLocaleDateString('es-CO') : '—'}
+                    </td>
+                    {/* Celda de Acciones Fija */}
+                    <td className="sticky right-0 z-10 bg-white px-4 py-3 group-hover:bg-slate-50 transition-colors border-b border-slate-50 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]">
+                      <button
+                        type="button"
+                        className="rounded-lg bg-slate-800 px-3 py-1 text-xs text-white hover:bg-slate-700"
+                        onClick={() => openEdit(prompt)}
+                      >
+                        Editar
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
           </tbody>
         </table>
       </div>

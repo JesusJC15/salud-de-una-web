@@ -23,7 +23,7 @@ name: Deploy Web to AWS
 on:
   # Auto: se dispara cuando CI termina exitosamente en main
   workflow_run:
-    workflows: ["CI"]
+    workflows: [CI]
     types: [completed]
     branches: [main]
 
