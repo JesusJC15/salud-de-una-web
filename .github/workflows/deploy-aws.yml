@@ -20,7 +20,7 @@ name: Deploy Web to AWS
 
 on:
   workflow_run:
-    workflows: ['CI']
+    workflows: [CI]
     types: [completed]
     branches: [main]
   workflow_dispatch:
