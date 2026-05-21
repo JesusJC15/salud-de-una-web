@@ -20,7 +20,7 @@ name: Deploy Web to AWS
 
 on:
   workflow_run:
-    workflows: ["CI"]
+    workflows: ['CI']
     types: [completed]
     branches: [main]
   workflow_dispatch:
@@ -41,10 +41,10 @@ jobs:
       - name: Configurar credenciales AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token:     ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region:            ${{ vars.AWS_REGION || 'us-east-1' }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
 
       - name: Leer ALB DNS desde SSM
         id: ssm
@@ -65,13 +65,13 @@ jobs:
 
       - name: Build y push imagen Next.js
         env:
-          REGISTRY:    ${{ steps.login-ecr.outputs.registry }}
-          REPOSITORY:  salud-de-una/web
-          IMAGE_TAG:   ${{ github.sha }}
-          ALB_DNS:     ${{ steps.ssm.outputs.alb_dns }}
-          AUTH0_DOMAIN:    ${{ vars.AUTH0_DOMAIN }}
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: salud-de-una/web
+          IMAGE_TAG: ${{ github.sha }}
+          ALB_DNS: ${{ steps.ssm.outputs.alb_dns }}
+          AUTH0_DOMAIN: ${{ vars.AUTH0_DOMAIN }}
           AUTH0_CLIENT_ID: ${{ vars.WEB_AUTH0_CLIENT_ID }}
-          AUTH0_AUDIENCE:  ${{ vars.AUTH0_AUDIENCE }}
+          AUTH0_AUDIENCE: ${{ vars.AUTH0_AUDIENCE }}
         run: |
           SHORT_SHA="${IMAGE_TAG::7}"
           docker build --target runner \
@@ -91,7 +91,7 @@ jobs:
       - name: Deploy a ECS (force new deployment)
         env:
           CLUSTER: ${{ vars.ECS_CLUSTER || 'salud-de-una-dev' }}
-          REGION:  ${{ vars.AWS_REGION  || 'us-east-1' }}
+          REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
         run: |
           aws ecs update-service \
             --cluster "$CLUSTER" \
@@ -104,7 +104,7 @@ jobs:
       - name: Esperar estabilización ECS
         env:
           CLUSTER: ${{ vars.ECS_CLUSTER || 'salud-de-una-dev' }}
-          REGION:  ${{ vars.AWS_REGION  || 'us-east-1' }}
+          REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
         run: |
           echo "Esperando que el web estabilice (máx 5 min)..."
           aws ecs wait services-stable \

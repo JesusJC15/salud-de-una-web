@@ -1,64 +1,63 @@
 #!/bin/bash
-# Dispara el workflow deploy-aws.yml del web en GitHub Actions
-# GitHub Actions hace: docker build Next.js → push ECR → ECS force-new-deployment
+# Disparar el deploy del web en GitHub Actions.
 #
-# PREREQUISITO: configurar en GitHub → Settings → Secrets:
-#   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN
-#   (de Vocareum → AWS Details → Show — expiran cada ~4 horas)
+# Los repos son PÚBLICOS — dos maneras de activar el deploy:
 #
-# PREREQUISITO: configurar en GitHub → Settings → Variables:
-#   AWS_REGION, ECS_CLUSTER, AUTH0_DOMAIN, AUTH0_AUDIENCE, WEB_AUTH0_CLIENT_ID
+#   A) AUTOMÁTICO (recomendado): hacer git push a main.
+#      GitHub Actions se activa solo con el workflow_run trigger.
+#
+#   B) MANUAL desde CloudShell (este script):
+#      Requiere un GitHub Token con scope 'workflow' guardado en SSM.
 set -euo pipefail
 
 REGION=$(cat "$HOME/.sduna-web-region" 2>/dev/null || echo "us-east-1")
 PROJECT_BE="salud-de-una"
 TF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/terraform"
 
+GITHUB_REPO=$(grep '^github_repo' "$TF_DIR/terraform.tfvars" 2>/dev/null | \
+  sed 's/.*= *"\(.*\)".*/\1/' || echo "")
+[[ -z "$GITHUB_REPO" ]] && { echo "ERROR: github_repo no en terraform.tfvars"; exit 1; }
+REPO_SLUG=$(echo "$GITHUB_REPO" | sed 's|https://github.com/||')
+
+ALB_DNS=$(aws ssm get-parameter --name "/${PROJECT_BE}/infra/alb-dns" \
+  --query Parameter.Value --output text --region "$REGION" 2>/dev/null || echo "")
+
 echo "=============================================="
-echo " SaludDeUna Web — Disparar Deploy"
+echo " SaludDeUna Web — Activar Deploy"
 echo "=============================================="
 echo ""
+echo "  Repo   : $REPO_SLUG (público)"
+echo "  API URL: http://$ALB_DNS/v1  (bakeado en imagen)"
+echo ""
 
-# ── Leer token GitHub (del backend — compartido) ──────────────────────────────
 GH_TOKEN=$(aws ssm get-parameter --name "/${PROJECT_BE}/GITHUB_TOKEN" \
   --with-decryption --query Parameter.Value --output text --region "$REGION" 2>/dev/null || echo "")
 
 if [[ -z "$GH_TOKEN" || "$GH_TOKEN" == "placeholder" ]]; then
-  echo "ERROR: GITHUB_TOKEN no configurado."
-  echo "       Ejecuta en el backend: bash deploy/scripts/03-secrets.sh"
-  exit 1
+  echo "  No hay GitHub Token configurado."
+  echo ""
+  echo "  Para activar el deploy:"
+  echo ""
+  echo "  1) Hacer push a main (recomendado):"
+  echo "     git push origin main"
+  echo "     → GitHub Actions se activa automáticamente"
+  echo ""
+  echo "  2) Guardar token y usar este script:"
+  echo "     cd ../salud-de-una-backend && bash deploy/scripts/03-secrets.sh"
+  echo "     Scope requerido: workflow"
+  echo ""
+  echo "  Ver estado de deploys:"
+  echo "  https://github.com/${REPO_SLUG}/actions/workflows/deploy-aws.yml"
+  exit 0
 fi
 
-# ── Leer repo GitHub desde terraform.tfvars del web ──────────────────────────
-GITHUB_REPO=$(grep '^github_repo' "$TF_DIR/terraform.tfvars" 2>/dev/null | \
-  sed 's/.*= *"\(.*\)".*/\1/' || echo "")
-
-if [[ -z "$GITHUB_REPO" ]]; then
-  echo "ERROR: github_repo no encontrado en terraform.tfvars."
-  exit 1
-fi
-
-REPO_SLUG=$(echo "$GITHUB_REPO" | sed 's|https://github.com/||')
-ALB_DNS=$(aws ssm get-parameter --name "/${PROJECT_BE}/infra/alb-dns" \
-  --query Parameter.Value --output text --region "$REGION" 2>/dev/null || echo "")
-
-echo "  Repo       : $REPO_SLUG"
-echo "  Workflow   : .github/workflows/deploy-aws.yml"
-echo "  API URL    : http://$ALB_DNS/v1"
-echo "  Callback   : http://$ALB_DNS/callback"
-echo ""
-echo "  El workflow bakes las variables NEXT_PUBLIC_* en la imagen."
-echo ""
-echo "  ⚠️  VERIFICA antes de continuar que GitHub tiene configurado:"
-echo "    Secrets: AWS_ACCESS_KEY_ID / SECRET / SESSION_TOKEN"
+echo "  ⚠️  Verifica que GitHub tiene configurados:"
+echo "    Secrets : AWS_ACCESS_KEY_ID / SECRET / SESSION_TOKEN"
 echo "    Variables: AWS_REGION, ECS_CLUSTER, AUTH0_DOMAIN, AUTH0_AUDIENCE, WEB_AUTH0_CLIENT_ID"
 echo ""
 
-read -rp "¿Disparar workflow de deploy? (S/n): " confirm
+read -rp "¿Disparar workflow deploy-aws.yml? (S/n): " confirm
 [[ "${confirm,,}" == "n" ]] && { echo "Cancelado."; exit 0; }
-
-echo ""
-echo ">>> Disparando workflow deploy-aws.yml..."
 
 HTTP_CODE=$(curl -s -o /tmp/gh-dispatch-web.json -w "%{http_code}" \
   -X POST \
@@ -70,24 +69,11 @@ HTTP_CODE=$(curl -s -o /tmp/gh-dispatch-web.json -w "%{http_code}" \
 case "$HTTP_CODE" in
   204)
     echo "✅ Workflow disparado."
-    echo ""
-    echo "  Ver progreso (Next.js tarda ~18-20 min):"
     echo "  https://github.com/${REPO_SLUG}/actions/workflows/deploy-aws.yml"
-    echo ""
-    echo "  Cuando termine, verifica: bash scripts/05-verify.sh"
+    echo "  (~18-20 min para Next.js)"
     ;;
-  401)
-    echo "❌ HTTP 401 — Token inválido. Actualiza GITHUB_TOKEN en el backend."
-    exit 1
-    ;;
-  404)
-    echo "❌ HTTP 404 — Workflow no encontrado en el repo."
-    echo "   Repo: $GITHUB_REPO"
-    exit 1
-    ;;
-  422)
-    echo "❌ HTTP 422 — Rama 'main' no existe o workflow no está en main."
-    cat /tmp/gh-dispatch-web.json 2>/dev/null || true
+  401|403)
+    echo "❌ HTTP $HTTP_CODE — Token inválido o sin scope 'workflow'."
     exit 1
     ;;
   *)
