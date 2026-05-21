@@ -102,11 +102,11 @@ git clone --depth 1 ${GITHUB_REPO} /tmp/web
 echo ">>> Construyendo imagen Next.js (puede tardar 10-15 min)..."
 docker build --target runner \
   --build-arg NEXT_OUTPUT=standalone \
-  --build-arg "NEXT_PUBLIC_API_BASE_URL=http://${ALB_DNS}/v1" \
+  --build-arg "NEXT_PUBLIC_API_BASE_URL=https://${ALB_DNS}/v1" \
   --build-arg "NEXT_PUBLIC_AUTH0_DOMAIN=${AUTH0_DOMAIN}" \
   --build-arg "NEXT_PUBLIC_AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}" \
   --build-arg "NEXT_PUBLIC_AUTH0_AUDIENCE=${AUTH0_AUDIENCE}" \
-  --build-arg "NEXT_PUBLIC_AUTH0_REDIRECT_URI=http://${ALB_DNS}/callback" \
+  --build-arg "NEXT_PUBLIC_AUTH0_REDIRECT_URI=https://${ALB_DNS}/callback" \
   -t ${ECR_BASE}/salud-de-una/web:latest \
   /tmp/web
 echo ">>> Subiendo imagen a ECR..."
@@ -128,7 +128,7 @@ echo ""
 echo ">>> Lanzando EC2 t2.micro..."
 INSTANCE_ID=$(aws ec2 run-instances \
   --image-id "$AMI_ID" \
-  --instance-type "t2.micro" \
+  --instance-type "t2.medium" \
   --iam-instance-profile Name=LabInstanceProfile \
   --security-group-ids "$SG_ID" \
   --subnet-id "$SUBNET_ID" \
