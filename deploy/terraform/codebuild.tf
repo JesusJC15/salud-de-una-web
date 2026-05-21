@@ -45,7 +45,7 @@ resource "aws_codebuild_project" "web" {
   name          = "${local.prefix}-build-web"
   description   = "Build imagen web Next.js + push ECR + deploy ECS"
   build_timeout = 25
-  service_role  = aws_iam_role.web_codebuild.arn
+  service_role  = data.aws_iam_role.lab_role.arn
 
   source {
     type            = "GITHUB"
