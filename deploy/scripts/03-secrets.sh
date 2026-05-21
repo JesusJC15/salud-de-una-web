@@ -1,9 +1,8 @@
 #!/bin/bash
-# Configurar secrets del web en SSM + credencial GitHub para CodeBuild + webhook
+# Configurar JWT_SECRET del web en SSM
 set -euo pipefail
 
 REGION=$(cat "$HOME/.sduna-web-region" 2>/dev/null || echo "us-east-1")
-OUTPUTS="$HOME/.sduna-web-tf-outputs.json"
 PROJECT_WEB="salud-de-una-web"
 PROJECT_BE="salud-de-una"
 
@@ -32,26 +31,25 @@ CURRENT_JWT=$(get_ssm "/${PROJECT_WEB}/JWT_SECRET")
 if [[ "$CURRENT_JWT" != "placeholder" && -n "$CURRENT_JWT" ]]; then
   echo "  JWT_SECRET -> ya configurado ✓ (${#CURRENT_JWT} chars)"
 else
-  # Intentar leer del backend automáticamente
   BE_JWT=$(get_ssm "/${PROJECT_BE}/JWT_SECRET")
   if [[ "$BE_JWT" != "placeholder" && -n "$BE_JWT" ]]; then
     echo "  Copiando JWT_SECRET del backend automáticamente..."
     put_ssm "/${PROJECT_WEB}/JWT_SECRET" "$BE_JWT"
     echo "  JWT_SECRET copiado del backend ✓"
   else
-    # Pedir manualmente
-    echo "  (No se encontró en el backend — ingresa el mismo valor)"
+    echo "  (No se encontró en el backend — ingresando manualmente)"
     if command -v openssl &>/dev/null; then
-      read -rp "  ¿Generar uno nuevo con openssl? (S/n): " gen
+      read -rp "  ¿Generar uno nuevo? (S/n): " gen
       if [[ "${gen,,}" != "n" ]]; then
         NEW_JWT=$(openssl rand -hex 32)
         put_ssm "/${PROJECT_WEB}/JWT_SECRET" "$NEW_JWT"
-        echo "  Auto-generado y guardado ✓  (primeros 8: ${NEW_JWT:0:8}...)"
+        echo "  Auto-generado ✓  (primeros 8: ${NEW_JWT:0:8}...)"
         echo ""
-        echo "  ⚠️  IMPORTANTE: actualiza también el backend con este mismo valor:"
-        echo "  aws ssm put-parameter --name /${PROJECT_BE}/JWT_SECRET --value '$NEW_JWT' --type SecureString --overwrite --region $REGION"
+        echo "  ⚠️  Actualiza el backend con el mismo valor:"
+        echo "  aws ssm put-parameter --name /${PROJECT_BE}/JWT_SECRET \\"
+        echo "    --value '$NEW_JWT' --type SecureString --overwrite --region $REGION"
       else
-        read -rsp "  JWT_SECRET (min 32 chars): " JWT_VAL; echo ""
+        read -rsp "  JWT_SECRET (mín 32 chars): " JWT_VAL; echo ""
         [[ -n "$JWT_VAL" ]] && { put_ssm "/${PROJECT_WEB}/JWT_SECRET" "$JWT_VAL"; echo "  Guardado ✓"; }
       fi
     else
@@ -61,55 +59,27 @@ else
   fi
 fi
 
+# ── Validar ───────────────────────────────────────────────────────────────────
 echo ""
-echo "--- GitHub Token para CodeBuild ---"
-
-# Intentar reutilizar el token del backend (ya registrado en CodeBuild)
-GH_FROM_BE=$(get_ssm "/${PROJECT_BE}/GITHUB_TOKEN")
-if [[ -n "$GH_FROM_BE" && "$GH_FROM_BE" != "placeholder" ]]; then
-  echo "  Token del backend encontrado → re-registrando en CodeBuild..."
-  aws codebuild import-source-credentials \
-    --token "$GH_FROM_BE" --server-type GITHUB --auth-type PERSONAL_ACCESS_TOKEN \
-    --region "$REGION" --no-cli-pager > /dev/null
-  echo "  Credencial GitHub OK ✓"
-  TOKEN_USE="$GH_FROM_BE"
-else
-  echo "  No se encontró token del backend. Ingresa uno nuevo:"
-  read -rsp "  GITHUB_TOKEN (scope: repo): " TOKEN_USE; echo ""
-  if [[ -n "$TOKEN_USE" ]]; then
-    aws codebuild import-source-credentials \
-      --token "$TOKEN_USE" --server-type GITHUB --auth-type PERSONAL_ACCESS_TOKEN \
-      --region "$REGION" --no-cli-pager > /dev/null
-    echo "  Credencial registrada ✓"
-  fi
-fi
-
-# Crear webhook si el proyecto CodeBuild del web existe
-if [[ -n "${TOKEN_USE:-}" && -f "$OUTPUTS" ]]; then
-  CB_WEB=$(python3 -c "import json; d=json.load(open('$OUTPUTS')); print(d['codebuild_web_project']['value'])" 2>/dev/null || echo "")
-  if [[ -n "$CB_WEB" ]]; then
-    echo ""
-    echo ">>> Configurando webhook (auto-build al hacer push a main)..."
-    FILTER='[[{"type":"EVENT","pattern":"PUSH"},{"type":"HEAD_REF","pattern":"^refs/heads/main$"}]]'
-    aws codebuild create-webhook \
-      --project-name "$CB_WEB" \
-      --filter-groups "$FILTER" \
-      --region "$REGION" \
-      --no-cli-pager > /dev/null 2>&1 \
-      && echo "    Webhook creado ✓" \
-      || echo "    Webhook ya existe ✓"
-  fi
-fi
-
-# ── Validar JWT_SECRET ────────────────────────────────────────────────────────
-echo ""
-echo ">>> Validando secrets web..."
 JWT_CHECK=$(get_ssm "/${PROJECT_WEB}/JWT_SECRET")
 if [[ "$JWT_CHECK" == "placeholder" || -z "$JWT_CHECK" ]]; then
-  echo "  ⚠️  JWT_SECRET sigue en placeholder — el middleware Next.js fallará"
+  echo "  ⚠️  JWT_SECRET sigue vacío — el middleware Next.js fallará."
 else
   echo "  ✅ JWT_SECRET configurado (${#JWT_CHECK} chars)"
 fi
 
+echo ""
+echo "--- Recordatorio para GitHub Actions ---"
+echo "  Configura en: https://github.com/<usuario>/salud-de-una-web → Settings"
+echo ""
+echo "  Secrets (renovar cada sesión Vocareum):"
+echo "    AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN"
+echo ""
+echo "  Variables (una sola vez):"
+echo "    AWS_REGION          = us-east-1"
+echo "    ECS_CLUSTER         = salud-de-una-dev"
+echo "    AUTH0_DOMAIN        = <tu-tenant>.us.auth0.com"
+echo "    AUTH0_AUDIENCE      = https://api.salud-de-una.com"
+echo "    WEB_AUTH0_CLIENT_ID = <client_id_spa>"
 echo ""
 echo "SIGUIENTE: bash scripts/04-build.sh"

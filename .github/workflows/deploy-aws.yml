@@ -1,97 +1,114 @@
 name: Deploy Web to AWS
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Este workflow se dispara DESPUÉS de que "CI" pasa en main.
-# Usa AWS CodeBuild para construir la imagen Docker Next.js y desplegarla en ECS.
+# Builds Next.js en GitHub Actions, sube a ECR y actualiza ECS.
+# Las variables NEXT_PUBLIC_* se bakean en la imagen en build-time.
+# Lee el ALB DNS de SSM automáticamente para no necesitar hardcodearlo.
 #
-# NOTA: Las variables NEXT_PUBLIC_* se bakean en la imagen durante el build de
-# CodeBuild (no en este workflow). El DNS del ALB ya está configurado en el
-# proyecto CodeBuild por Terraform.
+# SECRETS (renovar cada sesión de Learner Lab, ~4 horas):
+#   AWS_ACCESS_KEY_ID      → AWS Details → Show → Access Key
+#   AWS_SECRET_ACCESS_KEY  → AWS Details → Show → Secret Key
+#   AWS_SESSION_TOKEN      → AWS Details → Show → Session Token
 #
-# REQUISITOS (GitHub → Settings → Secrets and variables → Actions):
-#
-#   Secrets (renovar cada sesión de Learner Lab, ~4 horas):
-#     AWS_ACCESS_KEY_ID      → de "AWS Details" → "Show" en la consola del Learner Lab
-#     AWS_SECRET_ACCESS_KEY  → ídem
-#     AWS_SESSION_TOKEN      → ídem  ← obligatorio en Learner Lab
-#
-#   Variables (configurar una sola vez):
-#     AWS_REGION             = us-east-1
-#     CODEBUILD_WEB_PROJECT  = salud-de-una-dev-build-web
+# VARIABLES (configurar una sola vez, no expiran):
+#   AWS_REGION          = us-east-1
+#   ECS_CLUSTER         = salud-de-una-dev
+#   AUTH0_DOMAIN        = salud-de-una.us.auth0.com
+#   AUTH0_AUDIENCE      = https://api.salud-de-una.com
+#   WEB_AUTH0_CLIENT_ID = <client_id_de_la_spa>
 # ─────────────────────────────────────────────────────────────────────────────
 
 on:
-  # Auto: se dispara cuando CI termina exitosamente en main
   workflow_run:
-    workflows: [CI]
+    workflows: ["CI"]
     types: [completed]
     branches: [main]
-
-  # Manual: GitHub → Actions → Deploy Web to AWS → Run workflow
   workflow_dispatch:
 
 jobs:
   deploy:
-    name: Deploy a AWS ECS (via CodeBuild)
+    name: Build Next.js → ECR → ECS
     runs-on: ubuntu-latest
 
-    # Para workflow_run: solo si el CI pasó. Para workflow_dispatch: siempre.
     if: |
       github.event_name == 'workflow_dispatch' ||
       github.event.workflow_run.conclusion == 'success'
 
     steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
       - name: Configurar credenciales AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+          aws-session-token:     ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region:            ${{ vars.AWS_REGION || 'us-east-1' }}
 
-      - name: Iniciar build del Web en CodeBuild
-        id: start-build
+      - name: Leer ALB DNS desde SSM
+        id: ssm
+        env:
+          REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
         run: |
-          BUILD_ID=$(aws codebuild start-build \
-            --project-name "${{ vars.CODEBUILD_WEB_PROJECT || 'salud-de-una-dev-build-web' }}" \
-            --region "${{ vars.AWS_REGION || 'us-east-1' }}" \
-            --query 'build.id' \
-            --output text)
-          echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
-          echo "Web CodeBuild iniciado: $BUILD_ID"
-          echo "Logs en vivo: AWS Console → CodeBuild → Build history"
+          ALB_DNS=$(aws ssm get-parameter \
+            --name "/salud-de-una/infra/alb-dns" \
+            --query Parameter.Value \
+            --output text \
+            --region "$REGION")
+          echo "alb_dns=$ALB_DNS" >> "$GITHUB_OUTPUT"
+          echo "ALB DNS: $ALB_DNS"
 
-      - name: Esperar que el build complete
+      - name: Login a Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build y push imagen Next.js
+        env:
+          REGISTRY:    ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY:  salud-de-una/web
+          IMAGE_TAG:   ${{ github.sha }}
+          ALB_DNS:     ${{ steps.ssm.outputs.alb_dns }}
+          AUTH0_DOMAIN:    ${{ vars.AUTH0_DOMAIN }}
+          AUTH0_CLIENT_ID: ${{ vars.WEB_AUTH0_CLIENT_ID }}
+          AUTH0_AUDIENCE:  ${{ vars.AUTH0_AUDIENCE }}
         run: |
-          BUILD_ID="${{ steps.start-build.outputs.build_id }}"
-          REGION="${{ vars.AWS_REGION || 'us-east-1' }}"
+          SHORT_SHA="${IMAGE_TAG::7}"
+          docker build --target runner \
+            --build-arg NEXT_OUTPUT=standalone \
+            --build-arg "NEXT_PUBLIC_API_BASE_URL=http://${ALB_DNS}/v1" \
+            --build-arg "NEXT_PUBLIC_AUTH0_DOMAIN=${AUTH0_DOMAIN}" \
+            --build-arg "NEXT_PUBLIC_AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID}" \
+            --build-arg "NEXT_PUBLIC_AUTH0_AUDIENCE=${AUTH0_AUDIENCE}" \
+            --build-arg "NEXT_PUBLIC_AUTH0_REDIRECT_URI=http://${ALB_DNS}/callback" \
+            -t "$REGISTRY/$REPOSITORY:$SHORT_SHA" \
+            -t "$REGISTRY/$REPOSITORY:latest" \
+            .
+          docker push "$REGISTRY/$REPOSITORY:$SHORT_SHA"
+          docker push "$REGISTRY/$REPOSITORY:latest"
+          echo "✅ Imagen subida: $REGISTRY/$REPOSITORY:$SHORT_SHA"
 
-          # Next.js tarda más → 50 intentos × 30s = 25 minutos máx
-          echo "Esperando build $BUILD_ID... (máx 25 minutos)"
-          for i in $(seq 1 50); do
-            STATUS=$(aws codebuild batch-get-builds \
-              --ids "$BUILD_ID" \
-              --region "$REGION" \
-              --query 'builds[0].buildStatus' \
-              --output text)
-            PHASE=$(aws codebuild batch-get-builds \
-              --ids "$BUILD_ID" \
-              --region "$REGION" \
-              --query 'builds[0].currentPhase' \
-              --output text 2>/dev/null || echo "")
-            echo "[$i/50] Status: $STATUS | Fase: $PHASE"
-            case "$STATUS" in
-              SUCCEEDED)
-                echo "✅ Build completado. ECS desplegando en background."
-                exit 0
-                ;;
-              FAILED|FAULT|TIMED_OUT|STOPPED)
-                echo "❌ Build falló: $STATUS"
-                echo "Ver logs: AWS Console → CodeBuild → salud-de-una-dev-build-web"
-                exit 1
-                ;;
-            esac
-            sleep 30
-          done
-          echo "⚠️ Timeout (25 min). Verifica manualmente en AWS Console."
-          exit 1
+      - name: Deploy a ECS (force new deployment)
+        env:
+          CLUSTER: ${{ vars.ECS_CLUSTER || 'salud-de-una-dev' }}
+          REGION:  ${{ vars.AWS_REGION  || 'us-east-1' }}
+        run: |
+          aws ecs update-service \
+            --cluster "$CLUSTER" \
+            --service "${CLUSTER}-web" \
+            --force-new-deployment \
+            --region "$REGION" \
+            --no-cli-pager
+          echo "✅ ECS web actualizando tasks."
+
+      - name: Esperar estabilización ECS
+        env:
+          CLUSTER: ${{ vars.ECS_CLUSTER || 'salud-de-una-dev' }}
+          REGION:  ${{ vars.AWS_REGION  || 'us-east-1' }}
+        run: |
+          echo "Esperando que el web estabilice (máx 5 min)..."
+          aws ecs wait services-stable \
+            --cluster "$CLUSTER" \
+            --services "${CLUSTER}-web" \
+            --region "$REGION" || echo "WARN: timeout, puede seguir en proceso"
+          echo "✅ Deploy completado."
